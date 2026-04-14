@@ -57,6 +57,12 @@ watch([selectedYear, selectedMonth, () => profileStore.activeProfileId], () => {
   dashStore.fetchDashboard(selectedYear.value, selectedMonth.value, profileStore.activeProfileId)
 })
 
+async function onCardSaved() {
+  showAddCard.value = false
+  await cardsStore.fetchCards(profileStore.activeProfileId)
+  dashStore.fetchDashboard(selectedYear.value, selectedMonth.value, profileStore.activeProfileId)
+}
+
 onMounted(async () => {
   await cardsStore.fetchCards(profileStore.activeProfileId)
   dashStore.fetchDashboard(selectedYear.value, selectedMonth.value, profileStore.activeProfileId)
@@ -143,7 +149,7 @@ onMounted(async () => {
     <AddCardModal
       v-if="showAddCard"
       @close="showAddCard = false"
-      @saved="showAddCard = false; dashStore.fetchDashboard(selectedYear.value, selectedMonth.value, profileStore.activeProfileId)"
+      @saved="onCardSaved"
     />
   </div>
 </template>

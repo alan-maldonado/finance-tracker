@@ -4,30 +4,34 @@ import { useRoute } from 'vue-router'
 import AppLogo from './components/AppLogo.vue'
 import ProfileDropdown from './components/ProfileDropdown.vue'
 import { useProfileStore } from './stores/profile.js'
-import { cardsApi, statementsApi } from './api/index.js'
+import { useCardsStore } from './stores/cards.js'
+import { statementsApi } from './api/index.js'
 
 const route = useRoute()
 const profileStore = useProfileStore()
+const cardsStore = useCardsStore()
 const hasCards = ref(false)
 const hasStatements = ref(false)
 
-async function checkContent() {
-  const cards = await cardsApi.list(profileStore.activeProfileId)
-  hasCards.value = cards.length > 0
-  if (hasCards.value) {
-    const stmts = await statementsApi.list({ profile_id: profileStore.activeProfileId })
-    hasStatements.value = stmts.length > 0
-  } else {
-    hasStatements.value = false
-  }
+async function checkStatements() {
+  const stmts = await statementsApi.list({ profile_id: profileStore.activeProfileId })
+  hasStatements.value = stmts.length > 0
 }
 
-watch(() => profileStore.activeProfileId, checkContent)
-watch(() => route.path, checkContent)
+// Derive hasCards directly from the store — updates instantly when a card is added/deleted
+watch(() => cardsStore.cards.length, (len) => {
+  hasCards.value = len > 0
+  if (len > 0) checkStatements()
+  else hasStatements.value = false
+})
+
+watch(() => profileStore.activeProfileId, checkStatements)
+watch(() => route.path, checkStatements)
 
 onMounted(async () => {
   await profileStore.fetchProfiles()
-  await checkContent()
+  hasCards.value = cardsStore.cards.length > 0
+  if (hasCards.value) await checkStatements()
 })
 </script>
 

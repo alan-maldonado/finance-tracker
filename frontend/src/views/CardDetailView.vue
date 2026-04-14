@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCardsStore } from '../stores/cards.js'
+import { useProfileStore } from '../stores/profile.js'
 import { statementsApi, transactionsApi, manualEntriesApi } from '../api/index.js'
 import TransactionList from '../components/TransactionList.vue'
 import MSITracker from '../components/MSITracker.vue'
@@ -10,8 +11,9 @@ import ManualEntryModal from '../components/ManualEntryModal.vue'
 const props = defineProps({ id: { type: String, required: true } })
 const router = useRouter()
 const cardsStore = useCardsStore()
+const profileStore = useProfileStore()
 
-const card = computed(() => cardsStore.cards.find(c => c.id === parseInt(props.id)))
+const card = computed(() => cardsStore.cards.find(c => c.id === props.id))
 
 const statements = ref([])
 const selectedStatementId = ref(null)
@@ -101,7 +103,7 @@ watch(selectedStatementId, async () => {
 })
 
 onMounted(async () => {
-  await cardsStore.fetchCards()
+  await cardsStore.fetchCards(profileStore.activeProfileId)
   await loadStatements()
   await loadTransactions()
   await loadManualEntries()

@@ -4,7 +4,7 @@ import { profilesApi } from '../api/index.js'
 
 export const useProfileStore = defineStore('profile', () => {
   const profiles = ref([])
-  const activeProfileId = ref(parseInt(localStorage.getItem('activeProfileId')) || null)
+  const activeProfileId = ref(localStorage.getItem('activeProfileId') || null)
 
   async function fetchProfiles() {
     profiles.value = await profilesApi.list()
