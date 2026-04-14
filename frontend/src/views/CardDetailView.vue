@@ -172,7 +172,8 @@ onMounted(async () => {
           </div>
           <div class="text-right">
             <div class="text-slate-500 text-xs">Due date</div>
-            <div class="text-white font-semibold">
+            <div v-if="selectedStatement.minimum_payment === 0" class="text-green-400 font-semibold">No payment due</div>
+            <div v-else class="text-white font-semibold">
               {{ selectedStatement.payment_due_date
                   ? new Date(selectedStatement.payment_due_date + 'T00:00:00').toLocaleDateString('en-US')
                   : '—' }}

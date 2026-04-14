@@ -97,7 +97,8 @@ const barWidth = computed(() => {
         </div>
         <div class="text-right">
           <span class="text-slate-500">Due date</span>
-          <div class="text-white font-medium">
+          <div v-if="statement.minimum_payment === 0" class="text-green-400 font-medium">No payment due</div>
+          <div v-else class="text-white font-medium">
             {{ statement.payment_due_date
               ? new Date(statement.payment_due_date + 'T00:00:00').toLocaleDateString('en-US')
               : '—' }}
