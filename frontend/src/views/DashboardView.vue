@@ -48,7 +48,7 @@ const grandTotal = computed(() => {
   // Sum no-interest-remaining for cards that have it; fall back to projectedBalance for the rest
   return dashStore.data.cards.reduce((sum, c) => {
     const val = c.summary.noInterestRemaining ?? c.summary.projectedBalance ?? 0
-    return sum + val
+    return sum + Math.max(0, val)
   }, 0)
 })
 
