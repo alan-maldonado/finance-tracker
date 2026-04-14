@@ -72,9 +72,14 @@ onMounted(async () => {
 <template>
   <div>
 
+    <!-- Initial load -->
+    <div v-if="dashStore.data === null" class="flex items-center justify-center py-32">
+      <div class="w-6 h-6 border-2 border-slate-600 border-t-indigo-500 rounded-full animate-spin"></div>
+    </div>
+
     <!-- Landing: no cards yet -->
     <div
-      v-if="!dashStore.loading && (!dashStore.data || dashStore.data.cards.length === 0)"
+      v-else-if="!dashStore.loading && dashStore.data.cards.length === 0"
       class="flex flex-col items-center justify-center py-24 text-center"
     >
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 32" fill="none" class="w-20 h-16 mx-auto mb-6 opacity-80">
@@ -98,7 +103,7 @@ onMounted(async () => {
     </div>
 
     <!-- Dashboard: has cards -->
-    <template v-else-if="dashStore.data && dashStore.data.cards.length > 0">
+    <template v-else-if="dashStore.data.cards.length > 0">
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
         <div>
