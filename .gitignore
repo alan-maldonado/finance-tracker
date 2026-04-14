@@ -1,0 +1,21 @@
+node_modules
+
+# Uploaded PDFs and temp files
+backend/uploads/
+
+# SQLite database
+backend/data/
+
+# Logs
+*.log
+
+# Editor
+.DS_Store
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# Frontend build
+frontend/dist
+frontend/dist-ssr
+*.local

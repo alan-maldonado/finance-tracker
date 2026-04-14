@@ -1,0 +1,32 @@
+<template>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 40 32"
+    fill="none"
+    v-bind="$attrs"
+  >
+    <!-- Back card (offset, darker) -->
+    <rect x="6" y="5" width="32" height="20" rx="3" fill="#4f46e5" opacity="0.5"/>
+
+    <!-- Front card -->
+    <rect x="2" y="7" width="32" height="20" rx="3" fill="#6366f1"/>
+
+    <!-- Magnetic stripe -->
+    <rect x="2" y="12" width="32" height="5" fill="#4338ca"/>
+
+    <!-- Chip -->
+    <rect x="6" y="19" width="7" height="5" rx="1" fill="#a5b4fc" opacity="0.8"/>
+
+    <!-- Trend line (top right of card) -->
+    <polyline
+      points="22,22 26,18 29,20 33,15"
+      stroke="#e0e7ff"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      opacity="0.9"
+    />
+    <!-- Trend dot -->
+    <circle cx="33" cy="15" r="1.5" fill="#e0e7ff" opacity="0.9"/>
+  </svg>
+</template>
