@@ -63,7 +63,12 @@ const groupedByDate = computed(() => {
               <div class="min-w-0">
                 <div class="text-slate-200 text-sm truncate max-w-sm">{{ tx.description }}</div>
                 <div v-if="tx.type === 'msi' && tx.msi_total_months" class="text-orange-400 text-xs">
-                  {{ tx.msi_current_month }}/{{ tx.msi_total_months }} months · installment
+                  <template v-if="tx.msi_current_month === 0">
+                    Compra a {{ tx.msi_total_months }} meses
+                  </template>
+                  <template v-else>
+                    mensualidad {{ tx.msi_current_month }}/{{ tx.msi_total_months }}
+                  </template>
                 </div>
               </div>
             </div>
@@ -74,7 +79,7 @@ const groupedByDate = computed(() => {
               >
                 {{ tx.type === 'payment' ? '-' : '+' }}{{ fmt(Math.abs(tx.type === 'msi' ? (tx.msi_monthly_amount ?? tx.amount) : tx.amount)) }}
               </div>
-              <div v-if="tx.type === 'msi'" class="text-slate-500 text-xs">/mo</div>
+              <div v-if="tx.type === 'msi' && tx.msi_current_month > 0" class="text-slate-500 text-xs">/mes</div>
             </div>
           </div>
         </div>

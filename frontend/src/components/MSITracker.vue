@@ -10,7 +10,7 @@ const fmt = (n) =>
 
 // Group MSI transactions by a "plan" key (description + total_months)
 const plans = computed(() => {
-  const msiTxs = props.transactions.filter(t => t.type === 'msi')
+  const msiTxs = props.transactions.filter(t => t.type === 'msi' && t.msi_current_month > 0)
   return msiTxs.map(tx => ({
     ...tx,
     progress: tx.msi_total_months ? Math.round((tx.msi_current_month / tx.msi_total_months) * 100) : null,

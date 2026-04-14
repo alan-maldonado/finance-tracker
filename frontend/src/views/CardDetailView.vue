@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useCardsStore } from '../stores/cards.js'
 import { useProfileStore } from '../stores/profile.js'
 import { statementsApi, transactionsApi, manualEntriesApi } from '../api/index.js'
@@ -10,6 +10,7 @@ import ManualEntryModal from '../components/ManualEntryModal.vue'
 
 const props = defineProps({ id: { type: String, required: true } })
 const router = useRouter()
+const route = useRoute()
 const cardsStore = useCardsStore()
 const profileStore = useProfileStore()
 
@@ -36,6 +37,7 @@ const BANK_LABEL = {
   bbva: 'BBVA',
   banamex: 'Banamex',
   santander: 'Santander',
+  liverpool: 'Liverpool',
   other: 'Other',
 }
 
@@ -75,7 +77,9 @@ async function loadStatements() {
   if (!card.value) return
   statements.value = await statementsApi.list({ card_id: card.value.id })
   if (statements.value.length) {
-    selectedStatementId.value = statements.value[0].id
+    const fromQuery = route.query.statement
+    const match = fromQuery && statements.value.find(s => String(s.id) === String(fromQuery))
+    selectedStatementId.value = match ? match.id : statements.value[0].id
   }
 }
 
@@ -106,7 +110,8 @@ async function deleteStatement(id) {
   await loadManualEntries()
 }
 
-watch(selectedStatementId, async () => {
+watch(selectedStatementId, async (id) => {
+  router.replace({ query: { ...route.query, statement: id } })
   await loadTransactions()
   await loadManualEntries()
 })
