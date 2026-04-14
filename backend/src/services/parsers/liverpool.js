@@ -339,10 +339,18 @@ export function parseLiverpool(text) {
       }
     }
 
-    // Select Pago para no generar intereses by layout
+    // Select Pago para no generar intereses and Saldo al Corte by layout.
+    // Single layout: [..., cargos, mensualidad, saldo_al_corte]  → pagoIdx=2, saldo=last
+    // Split layout:  [saldo_al_corte, inflated, saldo_al_corte, mensualidad] → pagoIdx=3, saldo=first
     const pagoIdx = isSplitLayout ? 3 : 2;
     const cargoMes = afterAmounts[pagoIdx] ?? afterAmounts[2] ?? afterAmounts[1] ?? afterAmounts[0];
     if (!cargoMes) continue;
+
+    // Saldo al Corte = outstanding balance including current month's installment.
+    // Used for accurate remaining_months = ceil(saldo / monthly).
+    const saldoAlCorte = isSplitLayout
+      ? afterAmounts[0]                            // appears on the plan-name line
+      : afterAmounts[afterAmounts.length - 1];     // last amount in single-line layout
 
     transactions.push({
       date: parseDate(dateM[1], stYear, stMonth) ?? `${stYear}-01-01`,
@@ -352,6 +360,7 @@ export function parseLiverpool(text) {
       msiMonthlyAmount: cargoMes,
       msiTotalMonths: totalMonths,
       msiCurrentMonth,
+      msiRemainingAmount: (saldoAlCorte != null && saldoAlCorte > 0) ? saldoAlCorte : null,
     });
   }
 

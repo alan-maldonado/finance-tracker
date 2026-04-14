@@ -118,14 +118,15 @@ router.post('/upload', upload.single('file'), async (req, res, next) => {
     const insertTx = db.prepare(`
       INSERT INTO transactions
         (id, statement_id, date, description, amount, type,
-         msi_total_months, msi_current_month, msi_monthly_amount)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         msi_total_months, msi_current_month, msi_monthly_amount, msi_remaining_amount)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     db.transaction(txs => {
       for (const tx of txs) {
         insertTx.run(
           randomUUID(), statementId, tx.date, tx.description, tx.amount, tx.type,
-          tx.msiTotalMonths ?? null, tx.msiCurrentMonth ?? null, tx.msiMonthlyAmount ?? null
+          tx.msiTotalMonths ?? null, tx.msiCurrentMonth ?? null, tx.msiMonthlyAmount ?? null,
+          tx.msiRemainingAmount ?? null
         );
       }
     })(transactions);

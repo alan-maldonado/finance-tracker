@@ -31,10 +31,23 @@ router.get('/', (req, res) => {
 
     const plansWithCalc = plans.map(p => {
       const monthly = p.msi_monthly_amount ?? p.amount;
-      const remaining = p.msi_total_months != null && p.msi_current_month != null
-        ? p.msi_total_months - p.msi_current_month
-        : null;
-      return { ...p, remaining_months: remaining, remaining_amount: remaining != null ? monthly * remaining : null };
+      // If the parser stored the statement's Saldo al Corte, derive remaining_months from it
+      // using ceil(saldo / monthly). This is more accurate than total-current because:
+      //   - Saldo includes the current month's installment (not yet paid)
+      //   - Overpayments from prior months are reflected in the saldo
+      // Fallback: total - current (for transactions imported before msi_remaining_amount was added)
+      let remaining_amount, remaining_months;
+      if (p.msi_remaining_amount != null && monthly > 0) {
+        remaining_amount = p.msi_remaining_amount;
+        remaining_months = Math.ceil(p.msi_remaining_amount / monthly);
+      } else if (p.msi_total_months != null && p.msi_current_month != null) {
+        remaining_months = p.msi_total_months - p.msi_current_month;
+        remaining_amount = monthly * remaining_months;
+      } else {
+        remaining_months = null;
+        remaining_amount = null;
+      }
+      return { ...p, remaining_months, remaining_amount };
     });
 
     // One-time charges

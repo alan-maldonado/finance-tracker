@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   msi_total_months INTEGER,
   msi_current_month INTEGER,
   msi_monthly_amount REAL,
+  msi_remaining_amount REAL,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
