@@ -10,6 +10,7 @@ import transactionsRouter from './routes/transactions.js';
 import manualEntriesRouter from './routes/manual-entries.js';
 import dashboardRouter from './routes/dashboard.js';
 import msiRouter from './routes/msi.js';
+import profilesRouter from './routes/profiles.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -28,6 +29,7 @@ app.use('/api/transactions', transactionsRouter);
 app.use('/api/manual-entries', manualEntriesRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/msi', msiRouter);
+app.use('/api/profiles', profilesRouter);
 
 // Serve uploaded PDFs
 app.use('/uploads', express.static(join(__dirname, '../uploads')));

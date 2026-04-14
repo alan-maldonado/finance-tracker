@@ -1,10 +1,18 @@
+CREATE TABLE IF NOT EXISTS profiles (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS cards (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  profile_id INTEGER REFERENCES profiles(id) ON DELETE SET NULL,
   bank TEXT NOT NULL,
   alias TEXT NOT NULL,
   last4 TEXT,
   credit_limit REAL,
   color TEXT DEFAULT '#6366f1',
+  sort_order INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -16,6 +24,7 @@ CREATE TABLE IF NOT EXISTS statements (
   cutoff_date TEXT,
   payment_due_date TEXT,
   minimum_payment REAL,
+  no_interest_payment REAL,
   total_balance REAL,
   pdf_filename TEXT,
   raw_json TEXT,

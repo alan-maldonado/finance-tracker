@@ -7,7 +7,10 @@ const router = Router();
 // Returns active MSI plans + charges + manual entries from the latest statement of each card.
 router.get('/', (req, res) => {
   const db = getDb();
-  const cards = db.prepare('SELECT * FROM cards ORDER BY sort_order ASC, id ASC').all();
+  const { profile_id } = req.query;
+  const cards = profile_id
+    ? db.prepare('SELECT * FROM cards WHERE profile_id=? ORDER BY sort_order ASC, id ASC').all(profile_id)
+    : db.prepare('SELECT * FROM cards ORDER BY sort_order ASC, id ASC').all();
 
   const result = cards.map(card => {
     const statement = db.prepare(`

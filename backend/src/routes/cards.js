@@ -5,8 +5,11 @@ const router = Router();
 
 router.get('/', (req, res) => {
   const db = getDb();
-  const cards = db.prepare('SELECT * FROM cards ORDER BY sort_order ASC, id ASC').all();
-  res.json(cards);
+  const { profile_id } = req.query;
+  if (profile_id) {
+    return res.json(db.prepare('SELECT * FROM cards WHERE profile_id=? ORDER BY sort_order ASC, id ASC').all(profile_id));
+  }
+  res.json(db.prepare('SELECT * FROM cards ORDER BY sort_order ASC, id ASC').all());
 });
 
 // Reorder: body = { ids: [3, 1, 2] } — ordered array of card ids
@@ -22,12 +25,12 @@ router.put('/reorder', (req, res) => {
 });
 
 router.post('/', (req, res) => {
-  const { bank, alias, last4, credit_limit, color } = req.body;
+  const { bank, alias, last4, credit_limit, color, profile_id } = req.body;
   if (!bank || !alias) return res.status(400).json({ error: 'bank and alias are required' });
   const db = getDb();
   const result = db.prepare(
-    'INSERT INTO cards (bank, alias, last4, credit_limit, color) VALUES (?, ?, ?, ?, ?)'
-  ).run(bank, alias, last4 || null, credit_limit || null, color || '#6366f1');
+    'INSERT INTO cards (bank, alias, last4, credit_limit, color, profile_id) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(bank, alias, last4 || null, credit_limit || null, color || '#6366f1', profile_id || null);
   const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(result.lastInsertRowid);
   res.status(201).json(card);
 });

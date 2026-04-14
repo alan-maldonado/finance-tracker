@@ -7,11 +7,11 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const loading = ref(false)
   const error = ref(null)
 
-  async function fetchDashboard(year, month) {
+  async function fetchDashboard(year, month, profile_id) {
     loading.value = true
     error.value = null
     try {
-      data.value = await dashboardApi.get(year, month)
+      data.value = await dashboardApi.get(year, month, profile_id)
     } catch (e) {
       error.value = e.message
     } finally {

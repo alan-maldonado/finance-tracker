@@ -6,10 +6,10 @@ export const useCardsStore = defineStore('cards', () => {
   const cards = ref([])
   const loading = ref(false)
 
-  async function fetchCards() {
+  async function fetchCards(profile_id) {
     loading.value = true
     try {
-      cards.value = await cardsApi.list()
+      cards.value = await cardsApi.list(profile_id)
     } finally {
       loading.value = false
     }

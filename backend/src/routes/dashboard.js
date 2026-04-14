@@ -10,7 +10,10 @@ router.get('/', (req, res) => {
   if (!year || !month) return res.status(400).json({ error: 'year and month are required' });
 
   const db = getDb();
-  const cards = db.prepare('SELECT * FROM cards ORDER BY sort_order ASC, id ASC').all();
+  const { profile_id } = req.query;
+  const cards = profile_id
+    ? db.prepare('SELECT * FROM cards WHERE profile_id=? ORDER BY sort_order ASC, id ASC').all(profile_id)
+    : db.prepare('SELECT * FROM cards ORDER BY sort_order ASC, id ASC').all();
 
   const mm = String(month).padStart(2, '0');
 

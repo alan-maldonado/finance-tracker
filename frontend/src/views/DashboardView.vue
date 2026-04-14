@@ -3,12 +3,14 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDashboardStore } from '../stores/dashboard.js'
 import { useCardsStore } from '../stores/cards.js'
+import { useProfileStore } from '../stores/profile.js'
 import CardSummaryWidget from '../components/CardSummaryWidget.vue'
 import AddCardModal from '../components/AddCardModal.vue'
 
 const router = useRouter()
 const dashStore = useDashboardStore()
 const cardsStore = useCardsStore()
+const profileStore = useProfileStore()
 
 const now = new Date()
 const selectedYear = ref(now.getFullYear())
@@ -50,13 +52,14 @@ const grandTotal = computed(() => {
   }, 0)
 })
 
-watch([selectedYear, selectedMonth], () => {
-  dashStore.fetchDashboard(selectedYear.value, selectedMonth.value)
+watch([selectedYear, selectedMonth, () => profileStore.activeProfileId], () => {
+  cardsStore.fetchCards(profileStore.activeProfileId)
+  dashStore.fetchDashboard(selectedYear.value, selectedMonth.value, profileStore.activeProfileId)
 })
 
 onMounted(async () => {
-  await cardsStore.fetchCards()
-  dashStore.fetchDashboard(selectedYear.value, selectedMonth.value)
+  await cardsStore.fetchCards(profileStore.activeProfileId)
+  dashStore.fetchDashboard(selectedYear.value, selectedMonth.value, profileStore.activeProfileId)
 })
 </script>
 
@@ -127,7 +130,7 @@ onMounted(async () => {
     <AddCardModal
       v-if="showAddCard"
       @close="showAddCard = false"
-      @saved="showAddCard = false; dashStore.fetchDashboard(selectedYear, selectedMonth)"
+      @saved="showAddCard = false; dashStore.fetchDashboard(selectedYear.value, selectedMonth.value, profileStore.activeProfileId)"
     />
   </div>
 </template>

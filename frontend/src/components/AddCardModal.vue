@@ -1,9 +1,11 @@
 <script setup>
 import { ref } from 'vue'
 import { useCardsStore } from '../stores/cards.js'
+import { useProfileStore } from '../stores/profile.js'
 
 const emit = defineEmits(['close', 'saved'])
 const store = useCardsStore()
+const profileStore = useProfileStore()
 
 const form = ref({
   bank: 'bbva',
@@ -42,6 +44,7 @@ async function save() {
       last4: form.value.last4 || null,
       credit_limit: form.value.credit_limit ? parseFloat(form.value.credit_limit) : null,
       color: form.value.color,
+      profile_id: profileStore.activeProfileId,
     })
     emit('saved')
   } catch (e) {

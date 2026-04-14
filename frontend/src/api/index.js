@@ -3,7 +3,7 @@ import axios from 'axios'
 const api = axios.create({ baseURL: '/api' })
 
 export const cardsApi = {
-  list: () => api.get('/cards').then(r => r.data),
+  list: (profile_id) => api.get('/cards', { params: { profile_id } }).then(r => r.data),
   create: (data) => api.post('/cards', data).then(r => r.data),
   update: (id, data) => api.put(`/cards/${id}`, data).then(r => r.data),
   reorder: (ids) => api.put('/cards/reorder', { ids }).then(r => r.data),
@@ -32,9 +32,16 @@ export const manualEntriesApi = {
 }
 
 export const dashboardApi = {
-  get: (year, month) => api.get('/dashboard', { params: { year, month } }).then(r => r.data),
+  get: (year, month, profile_id) => api.get('/dashboard', { params: { year, month, profile_id } }).then(r => r.data),
 }
 
 export const msiApi = {
-  get: () => api.get('/msi').then(r => r.data),
+  get: (profile_id) => api.get('/msi', { params: { profile_id } }).then(r => r.data),
+}
+
+export const profilesApi = {
+  list: () => api.get('/profiles').then(r => r.data),
+  create: (name) => api.post('/profiles', { name }).then(r => r.data),
+  rename: (id, name) => api.put(`/profiles/${id}`, { name }).then(r => r.data),
+  remove: (id) => api.delete(`/profiles/${id}`).then(r => r.data),
 }

@@ -16,16 +16,12 @@ export function getDb() {
     db.pragma('foreign_keys = ON');
     const schema = readFileSync(join(__dirname, 'schema.sql'), 'utf8');
     db.exec(schema);
-    // Migrations
-    try { db.prepare('ALTER TABLE statements ADD COLUMN no_interest_payment REAL').run(); } catch {}
-    try {
-      db.prepare('ALTER TABLE cards ADD COLUMN sort_order INTEGER DEFAULT 0').run();
-      // Initialize sort_order from rowid so existing cards keep their order
-      db.prepare('UPDATE cards SET sort_order = id WHERE sort_order = 0').run();
-    } catch {}
-    // Rename citibanamex → banamex in existing data
-    db.prepare("UPDATE cards SET bank='banamex' WHERE bank='citibanamex'").run();
-    db.prepare("UPDATE statements SET raw_json=REPLACE(raw_json,'\"bank\":\"citibanamex\"','\"bank\":\"banamex\"') WHERE raw_json LIKE '%citibanamex%'").run();
+
+    // Ensure at least one default profile exists
+    const profileCount = db.prepare('SELECT COUNT(*) as n FROM profiles').get().n;
+    if (profileCount === 0) {
+      db.prepare("INSERT INTO profiles (name) VALUES ('Personal')").run();
+    }
   }
   return db;
 }

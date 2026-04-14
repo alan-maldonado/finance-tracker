@@ -2,10 +2,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { msiApi } from '../api/index.js'
+import { useProfileStore } from '../stores/profile.js'
 
 const router = useRouter()
 const data = ref(null)
 const loading = ref(true)
+const profileStore = useProfileStore()
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const BANK_LABEL = { bbva: 'BBVA', banamex: 'Banamex', santander: 'Santander', other: 'Other' }
@@ -15,7 +17,7 @@ const fmt = (n) =>
     minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n)
 
 onMounted(async () => {
-  data.value = await msiApi.get()
+  data.value = await msiApi.get(profileStore.activeProfileId)
   loading.value = false
 })
 
