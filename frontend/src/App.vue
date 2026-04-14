@@ -1,11 +1,34 @@
 <script setup>
-import { onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import AppLogo from './components/AppLogo.vue'
 import ProfileDropdown from './components/ProfileDropdown.vue'
 import { useProfileStore } from './stores/profile.js'
+import { cardsApi, statementsApi } from './api/index.js'
 
+const route = useRoute()
 const profileStore = useProfileStore()
-onMounted(() => profileStore.fetchProfiles())
+const hasCards = ref(false)
+const hasStatements = ref(false)
+
+async function checkContent() {
+  const cards = await cardsApi.list(profileStore.activeProfileId)
+  hasCards.value = cards.length > 0
+  if (hasCards.value) {
+    const stmts = await statementsApi.list({ profile_id: profileStore.activeProfileId })
+    hasStatements.value = stmts.length > 0
+  } else {
+    hasStatements.value = false
+  }
+}
+
+watch(() => profileStore.activeProfileId, checkContent)
+watch(() => route.path, checkContent)
+
+onMounted(async () => {
+  await profileStore.fetchProfiles()
+  await checkContent()
+})
 </script>
 
 <template>
@@ -17,26 +40,29 @@ onMounted(() => profileStore.fetchProfiles())
       </RouterLink>
       <div class="flex gap-4 ml-6">
         <RouterLink
+          v-if="hasCards"
           to="/"
           class="text-sm text-slate-400 hover:text-white transition-colors"
           active-class="!text-white font-medium"
         >
           Dashboard
         </RouterLink>
-        <RouterLink
-          to="/msi"
-          class="text-sm text-slate-400 hover:text-white transition-colors"
-          active-class="!text-white font-medium"
-        >
-          Installment Plans
-        </RouterLink>
-        <RouterLink
-          to="/upcoming"
-          class="text-sm text-slate-400 hover:text-white transition-colors"
-          active-class="!text-white font-medium"
-        >
-          Upcoming Payments
-        </RouterLink>
+        <template v-if="hasStatements">
+          <RouterLink
+            to="/msi"
+            class="text-sm text-slate-400 hover:text-white transition-colors"
+            active-class="!text-white font-medium"
+          >
+            Installment Plans
+          </RouterLink>
+          <RouterLink
+            to="/upcoming"
+            class="text-sm text-slate-400 hover:text-white transition-colors"
+            active-class="!text-white font-medium"
+          >
+            Upcoming Payments
+          </RouterLink>
+        </template>
       </div>
       <div class="ml-auto flex items-center gap-3">
         <ProfileDropdown />

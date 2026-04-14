@@ -11,36 +11,40 @@ const showAddCard = ref(false)
 const editingCard = ref(null)
 const deletingId = ref(null)
 
+const PROFILE_COLORS = [
+  '#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#14b8a6','#f97316','#64748b',
+]
+
 // Profile management
 const showAddProfile = ref(false)
 const newProfileName = ref('')
+const newProfileColor = ref('#6366f1')
 const addingProfile = ref(false)
-const renamingId = ref(null)
-const renameValue = ref('')
+const editingProfile = ref(null) // { id, name, color }
 const deletingProfileId = ref(null)
 
 async function addProfile() {
   if (!newProfileName.value.trim()) return
   addingProfile.value = true
   try {
-    const p = await profileStore.createProfile(newProfileName.value.trim())
+    const p = await profileStore.createProfile(newProfileName.value.trim(), newProfileColor.value)
     profileStore.setActive(p.id)
     newProfileName.value = ''
+    newProfileColor.value = '#6366f1'
     showAddProfile.value = false
   } finally {
     addingProfile.value = false
   }
 }
 
-function startRename(profile) {
-  renamingId.value = profile.id
-  renameValue.value = profile.name
+function startEdit(profile) {
+  editingProfile.value = { id: profile.id, name: profile.name, color: profile.color ?? '#6366f1' }
 }
 
-async function saveRename(id) {
-  if (!renameValue.value.trim()) { renamingId.value = null; return }
-  await profileStore.renameProfile(id, renameValue.value.trim())
-  renamingId.value = null
+async function saveEdit() {
+  if (!editingProfile.value?.name.trim()) { editingProfile.value = null; return }
+  await profileStore.updateProfile(editingProfile.value.id, editingProfile.value.name.trim(), editingProfile.value.color)
+  editingProfile.value = null
 }
 
 async function deleteProfile(profile) {
@@ -118,74 +122,83 @@ function onDragEnd() {
         </button>
       </div>
 
-      <div v-if="showAddProfile" class="mb-3 flex gap-2">
+      <!-- Add profile form -->
+      <div v-if="showAddProfile" class="mb-3 bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
         <input
           v-model="newProfileName"
           placeholder="Profile name"
           @keydown.enter="addProfile"
           @keydown.esc="showAddProfile = false; newProfileName = ''"
-          class="flex-1 bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+          class="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm placeholder-slate-500 focus:outline-none focus:border-indigo-500"
           autofocus
         />
-        <button
-          @click="addProfile"
-          :disabled="addingProfile"
-          class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors disabled:opacity-50"
-        >
-          {{ addingProfile ? '...' : 'Save' }}
-        </button>
-        <button
-          @click="showAddProfile = false; newProfileName = ''"
-          class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm rounded-lg transition-colors"
-        >
-          Cancel
-        </button>
+        <div class="flex items-center gap-2">
+          <span class="text-slate-500 text-xs">Color</span>
+          <button
+            v-for="c in PROFILE_COLORS" :key="c"
+            @click="newProfileColor = c"
+            class="w-5 h-5 rounded-full border-2 transition-all"
+            :class="newProfileColor === c ? 'border-white scale-110' : 'border-transparent'"
+            :style="{ backgroundColor: c }"
+          />
+        </div>
+        <div class="flex gap-2">
+          <button @click="addProfile" :disabled="addingProfile" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors disabled:opacity-50">
+            {{ addingProfile ? '...' : 'Save' }}
+          </button>
+          <button @click="showAddProfile = false; newProfileName = ''" class="px-4 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm rounded-lg transition-colors">
+            Cancel
+          </button>
+        </div>
       </div>
 
       <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
         <div class="divide-y divide-slate-700">
-          <div
-            v-for="p in profileStore.profiles"
-            :key="p.id"
-            class="flex items-center gap-3 px-5 py-3.5"
-            :class="p.id === profileStore.activeProfileId ? 'bg-indigo-950/30' : ''"
-          >
-            <span class="w-2.5 h-2.5 rounded-full shrink-0" :class="p.id === profileStore.activeProfileId ? 'bg-indigo-400' : 'bg-slate-600'"></span>
-
-            <template v-if="renamingId === p.id">
+          <div v-for="p in profileStore.profiles" :key="p.id">
+            <!-- Edit mode -->
+            <div v-if="editingProfile?.id === p.id" class="px-5 py-4 space-y-3">
               <input
-                v-model="renameValue"
-                @keydown.enter="saveRename(p.id)"
-                @keydown.esc="renamingId = null"
-                class="flex-1 bg-slate-700 border border-slate-600 text-white rounded-lg px-2 py-1 text-sm focus:outline-none focus:border-indigo-500"
+                v-model="editingProfile.name"
+                @keydown.enter="saveEdit"
+                @keydown.esc="editingProfile = null"
+                class="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
               />
-              <button @click="saveRename(p.id)" class="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition-colors">Save</button>
-              <button @click="renamingId = null" class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors">Cancel</button>
-            </template>
-            <template v-else>
+              <div class="flex items-center gap-2">
+                <span class="text-slate-500 text-xs">Color</span>
+                <button
+                  v-for="c in PROFILE_COLORS" :key="c"
+                  @click="editingProfile.color = c"
+                  class="w-5 h-5 rounded-full border-2 transition-all"
+                  :class="editingProfile.color === c ? 'border-white scale-110' : 'border-transparent'"
+                  :style="{ backgroundColor: c }"
+                />
+              </div>
+              <div class="flex gap-2">
+                <button @click="saveEdit" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors">Save</button>
+                <button @click="editingProfile = null" class="px-4 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm rounded-lg transition-colors">Cancel</button>
+              </div>
+            </div>
+            <!-- Normal row -->
+            <div
+              v-else
+              class="flex items-center gap-3 px-5 py-3.5"
+              :class="p.id === profileStore.activeProfileId ? 'bg-slate-700/30' : ''"
+            >
+              <span class="w-2.5 h-2.5 rounded-full shrink-0" :style="{ backgroundColor: p.color ?? '#6366f1' }"></span>
               <span class="flex-1 text-white text-sm font-medium">{{ p.name }}</span>
               <button
                 v-if="p.id !== profileStore.activeProfileId"
                 @click="profileStore.setActive(p.id)"
                 class="text-xs px-2 py-1 bg-slate-700 hover:bg-indigo-700 text-slate-300 hover:text-white rounded transition-colors"
-              >
-                Switch
-              </button>
-              <span v-else class="text-xs text-indigo-400 px-2">Active</span>
-              <button
-                @click="startRename(p)"
-                class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-400 rounded transition-colors"
-              >
-                Rename
-              </button>
+              >Switch</button>
+              <span v-else class="text-xs px-2" :style="{ color: p.color ?? '#818cf8' }">Active</span>
+              <button @click="startEdit(p)" class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-400 rounded transition-colors">Edit</button>
               <button
                 @click="deleteProfile(p)"
                 :disabled="profileStore.profiles.length <= 1 || deletingProfileId === p.id"
                 class="text-xs px-2 py-1 bg-slate-700 hover:bg-red-900/60 text-slate-400 hover:text-red-400 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                {{ deletingProfileId === p.id ? '...' : 'Delete' }}
-              </button>
-            </template>
+              >{{ deletingProfileId === p.id ? '...' : 'Delete' }}</button>
+            </div>
           </div>
         </div>
       </div>

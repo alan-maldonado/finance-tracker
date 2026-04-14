@@ -20,14 +20,14 @@ export const useProfileStore = defineStore('profile', () => {
     else localStorage.removeItem('activeProfileId')
   }
 
-  async function createProfile(name) {
-    const p = await profilesApi.create(name)
+  async function createProfile(name, color) {
+    const p = await profilesApi.create(name, color)
     profiles.value.push(p)
     return p
   }
 
-  async function renameProfile(id, name) {
-    const p = await profilesApi.rename(id, name)
+  async function updateProfile(id, name, color) {
+    const p = await profilesApi.update(id, name, color)
     const idx = profiles.value.findIndex(x => x.id === id)
     if (idx !== -1) profiles.value[idx] = p
     return p
@@ -41,5 +41,5 @@ export const useProfileStore = defineStore('profile', () => {
 
   const activeProfile = () => profiles.value.find(p => p.id === activeProfileId.value)
 
-  return { profiles, activeProfileId, activeProfile, fetchProfiles, setActive, createProfile, renameProfile, deleteProfile }
+  return { profiles, activeProfileId, activeProfile, fetchProfiles, setActive, createProfile, updateProfile, deleteProfile }
 })

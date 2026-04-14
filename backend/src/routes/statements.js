@@ -143,13 +143,14 @@ router.post('/upload', upload.single('file'), async (req, res, next) => {
 
 router.get('/', (req, res) => {
   const db = getDb();
-  const { card_id, year, month } = req.query;
-  let query = 'SELECT * FROM statements WHERE 1=1';
+  const { card_id, year, month, profile_id } = req.query;
+  let query = 'SELECT s.* FROM statements s JOIN cards c ON c.id = s.card_id WHERE 1=1';
   const params = [];
-  if (card_id) { query += ' AND card_id=?'; params.push(card_id); }
-  if (year)    { query += ' AND period_year=?'; params.push(year); }
-  if (month)   { query += ' AND period_month=?'; params.push(month); }
-  query += ' ORDER BY period_year DESC, period_month DESC';
+  if (profile_id) { query += ' AND c.profile_id=?'; params.push(profile_id); }
+  if (card_id)    { query += ' AND s.card_id=?'; params.push(card_id); }
+  if (year)       { query += ' AND s.period_year=?'; params.push(year); }
+  if (month)      { query += ' AND s.period_month=?'; params.push(month); }
+  query += ' ORDER BY s.period_year DESC, s.period_month DESC';
   res.json(db.prepare(query).all(...params));
 });
 

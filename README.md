@@ -1,9 +1,10 @@
 # Finance Tracker
 
-Personal credit card manager for tracking Mexican bank statements via PDF upload. Supports multiple cards from BBVA, Banamex, and Santander.
+Personal credit card manager for tracking Mexican bank statements via PDF upload. Supports multiple cards from BBVA, Banamex, and Santander, with multi-profile support for separating cards per person.
 
 ## Features
 
+- **Multi-profile** — Separate spaces per person, each with their own cards and statements; switch from the nav dropdown
 - **PDF statement import** — Upload statements from BBVA, Banamex, and Santander (including password-protected PDFs)
 - **Transaction classification** — Automatically detects regular charges, installment plans (MSI), payments, and interest
 - **Installment Plans** — Track all active MSI plans across cards with progress bars and remaining amounts
@@ -12,6 +13,7 @@ Personal credit card manager for tracking Mexican bank statements via PDF upload
 - **Balance projection** — Shows what you need to pay to avoid interest, adjusted by manual payments or real payments from the next statement
 - **Dashboard** — Monthly overview grouped by payment due date (not statement period)
 - **PDF storage** — Statements saved as `statements/{cardId}/{alias}-{YYYY}-{MM}.pdf` and downloadable from the card detail view
+- **Card reordering** — Drag and drop cards in Settings to control display order
 
 ## Stack
 
@@ -23,7 +25,17 @@ Personal credit card manager for tracking Mexican bank statements via PDF upload
 | PDF parsing | pdf-parse (pdfjs) |
 | File uploads | multer |
 
-## Getting Started
+## Running with Docker
+
+```bash
+docker compose up --build
+```
+
+App available at [http://localhost:5000](http://localhost:5000).
+
+Data is persisted in `backend/data/` (SQLite) and `backend/uploads/` (PDFs) on the host — survives container rebuilds.
+
+## Running locally
 
 ### Requirements
 
@@ -53,13 +65,15 @@ Then open [http://localhost:5173](http://localhost:5173).
 
 ```
 finance-tracker/
+├── docker-compose.yml
 ├── backend/
 │   └── src/
 │       ├── index.js              # Express app
 │       ├── db/
 │       │   ├── schema.sql        # SQLite schema
-│       │   └── database.js       # DB singleton + migrations
+│       │   └── database.js       # DB singleton
 │       ├── routes/
+│       │   ├── profiles.js
 │       │   ├── cards.js
 │       │   ├── statements.js     # PDF upload + parse
 │       │   ├── transactions.js
@@ -83,6 +97,7 @@ finance-tracker/
         │   └── SettingsView.vue
         └── components/
             ├── CardSummaryWidget.vue
+            ├── ProfileDropdown.vue
             ├── TransactionList.vue
             ├── MSITracker.vue
             ├── ManualEntryModal.vue
@@ -103,7 +118,8 @@ Bank is auto-detected from the first 1000 characters of extracted PDF text.
 
 ## Data & Privacy
 
-All data is stored locally:
+All data is stored locally — nothing leaves your machine:
+
 - Database: `backend/data/finance.db`
 - PDFs: `backend/uploads/statements/{cardId}/`
 

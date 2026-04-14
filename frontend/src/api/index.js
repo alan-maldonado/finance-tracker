@@ -41,7 +41,7 @@ export const msiApi = {
 
 export const profilesApi = {
   list: () => api.get('/profiles').then(r => r.data),
-  create: (name) => api.post('/profiles', { name }).then(r => r.data),
-  rename: (id, name) => api.put(`/profiles/${id}`, { name }).then(r => r.data),
+  create: (name, color) => api.post('/profiles', { name, color }).then(r => r.data),
+  update: (id, name, color) => api.put(`/profiles/${id}`, { name, color }).then(r => r.data),
   remove: (id) => api.delete(`/profiles/${id}`).then(r => r.data),
 }

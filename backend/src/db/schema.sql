@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS profiles (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
+  color TEXT DEFAULT '#6366f1',
   created_at TEXT DEFAULT (datetime('now'))
 );
 
