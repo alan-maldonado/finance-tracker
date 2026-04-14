@@ -248,10 +248,20 @@ export function parseLiverpool(text) {
   // RESUMEN rows have 4+ amounts (saldo_anterior, cargos, mensualidad, saldo_al_corte).
   // DETALLE rows have exactly 1 positive amount (original purchase) → skip those.
   // Some PDFs use "MESES" instead of "MENS", and "INTERSES" instead of "INTERESES"
-  const sinRe = /(\d{1,2})\s+(?:MENS|MESES)\s+SIN\s+INTERE?SES/gi;
+  // Two patterns via alternation:
+  //   sm[1]: normal case — digit immediately before "MENS" (e.g. "09 MENS SIN INTERESES")
+  //   sm[2]: absorbed-digit case — digit is last 2 chars of segment number, separated from
+  //          "MENS" by ≥10 chars of garbled footnote text injected by the PDF extractor
+  //          (e.g. "08809[Glosario de abreviaturas…]MENS SIN INTERESES")
+  //          Normal cases have exactly 1 space, so the {10,300} minimum excludes them.
+  //          (?!\d) prevents matching mid-sequence in phone/folio numbers (e.g. "20260→3…").
+  //          [^\n\d]{10,300}? prevents crossing digit runs (phone numbers, folio numbers).
+  //          The legitimate garbled-footnote gap contains no digits.
+  // "SIN" may be split by garbled "Descripción" text: allow S[garbled]IN via S[^\n]{0,80}?IN
+  const sinRe = /(?:(\d{1,2})\s+|\d{3}(\d{1,2})(?!\d)[^\n\d]{10,300}?)(?:MENS|MESES)\s+S[^\n]{0,80}?IN\s+INTERE?SES/gi;
   let sm;
   while ((sm = sinRe.exec(text)) !== null) {
-    const totalMonths = parseInt(sm[1]);
+    const totalMonths = parseInt(sm[1] ?? sm[2]);
     if (totalMonths < 1 || totalMonths > 60) continue;
 
     // Grab context window around the match to find date and amounts
@@ -302,6 +312,8 @@ export function parseLiverpool(text) {
 
     // Skip DETALLE purchase lines: only 1 positive amount (the purchase total).
     // RESUMEN rows have at least 3 (saldo_anterior, mensualidad, saldo_al_corte).
+    // Skip DETALLE purchase lines: only 1 positive amount (the purchase total).
+    // RESUMEN rows have at least 3 (saldo_anterior, mensualidad, saldo_al_corte).
     if (afterAmounts.filter(a => a > 0).length < 3) continue;
 
     // Extract current month (Mensualidad a Pagar column).
@@ -325,7 +337,7 @@ export function parseLiverpool(text) {
       // Single layout: month digit(s) appear immediately after "MENS SIN INTERESES",
       // before any garbled text (VTA, USD, PIF…) or the saldo anterior digits.
       // e.g. "INTERESES2VTA629.00" → captures "2"; "INTERESES8255.36" → captures "82"
-      const directM = afterKey.match(/MENS\s+SIN\s+INTERESES\s*(\d{1,2})/i);
+      const directM = afterKey.match(/MENS\s+S[^\n]{0,80}?IN\s+INTERE?SES\s*(\d{1,2})/i);
       if (directM) {
         const twoD = parseInt(directM[1]);
         if (twoD >= 1 && twoD <= totalMonths) {

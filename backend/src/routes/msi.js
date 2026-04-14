@@ -39,7 +39,9 @@ router.get('/', (req, res) => {
       let remaining_amount, remaining_months;
       if (p.msi_remaining_amount != null && monthly > 0) {
         remaining_amount = p.msi_remaining_amount;
-        remaining_months = Math.ceil(p.msi_remaining_amount / monthly);
+        // Round to 2 decimal places before ceiling to avoid floating-point noise
+        // (e.g. 2893.61 / 1446.79 = 2.0000207 → should be 2, not 3)
+        remaining_months = Math.ceil(Math.round(p.msi_remaining_amount / monthly * 100) / 100);
       } else if (p.msi_total_months != null && p.msi_current_month != null) {
         remaining_months = p.msi_total_months - p.msi_current_month;
         remaining_amount = monthly * remaining_months;
