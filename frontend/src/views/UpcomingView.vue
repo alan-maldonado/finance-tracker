@@ -170,6 +170,7 @@ function pctClass(pct) {
               <th class="px-3 py-2 text-right text-slate-500 font-medium border-b border-slate-700 whitespace-nowrap min-w-24">Original</th>
               <th class="px-3 py-2 text-right text-slate-500 font-medium border-b border-slate-700 whitespace-nowrap min-w-24">Paid</th>
               <th class="px-3 py-2 text-right text-slate-500 font-medium border-b border-slate-700 whitespace-nowrap min-w-24">Balance</th>
+              <th class="px-3 py-2 text-right text-indigo-400 font-medium border-b border-l border-slate-700 whitespace-nowrap min-w-24">Due now</th>
               <th class="px-3 py-2 text-center text-slate-500 font-medium border-b border-slate-700 min-w-12">%</th>
               <th class="px-3 py-2 text-center text-slate-500 font-medium border-b border-slate-700 min-w-12">Mo.</th>
               <th
@@ -186,6 +187,7 @@ function pctClass(pct) {
               <th class="border-b border-slate-700"></th>
               <th class="border-b border-slate-700"></th>
               <th class="border-b border-slate-700"></th>
+              <th class="border-b border-l border-slate-700"></th>
               <th class="border-b border-slate-700"></th>
               <th class="border-b border-slate-700"></th>
               <th
@@ -218,7 +220,12 @@ function pctClass(pct) {
                   {{ fmt(cardData.plans.reduce((s,p) => s + (p.msi_monthly_amount ?? p.amount) * (p.msi_current_month ?? 0), 0)) }}
                 </td>
                 <td class="border-t border-slate-700 px-3 py-2.5 text-right text-white font-semibold">
-                  {{ fmt(cardData.totalRemaining + cardData.totalCharges + cardData.manualBalance) }}
+                  {{ fmt(cardData.totalRemaining + cardData.totalCharges) }}
+                </td>
+                <td class="border-t border-l border-slate-700 px-3 py-2.5 text-right font-bold"
+                  :class="(cardData.statement.total_balance + cardData.manualBalance) <= 0 ? 'text-green-400' : 'text-indigo-300'"
+                >
+                  {{ fmt(cardData.statement.total_balance != null ? cardData.statement.total_balance + cardData.manualBalance : null) }}
                 </td>
                 <td class="border-t border-slate-700 px-3 py-2.5"></td>
                 <td class="border-t border-slate-700 px-3 py-2.5 text-center text-orange-400 font-semibold">
@@ -251,6 +258,7 @@ function pctClass(pct) {
                 <td class="border-t border-slate-700/50 px-3 py-2 text-right text-slate-200">
                   {{ fmt(plan.remaining_amount) }}
                 </td>
+                <td class="border-t border-l border-slate-700/50 px-3 py-2"></td>
                 <td class="border-t border-slate-700/50 px-3 py-2 text-center">
                   <span v-if="plan.msi_total_months" :class="pctClass(plan.msi_current_month / plan.msi_total_months * 100)">
                     {{ Math.round(plan.msi_current_month / plan.msi_total_months * 100) }}%
@@ -280,6 +288,7 @@ function pctClass(pct) {
                 <td class="border-t border-slate-700/50 px-3 py-2 text-right text-yellow-400">{{ fmt(cardData.totalInterest) }}</td>
                 <td class="border-t border-slate-700/50 px-3 py-2 text-right text-slate-600">—</td>
                 <td class="border-t border-slate-700/50 px-3 py-2 text-right text-yellow-400">{{ fmt(cardData.totalInterest) }}</td>
+                <td class="border-t border-l border-slate-700/50 px-3 py-2"></td>
                 <td class="border-t border-slate-700/50 px-3 py-2 text-center text-slate-600">—</td>
                 <td class="border-t border-slate-700/50 px-3 py-2 text-center text-slate-500">1</td>
                 <td
@@ -304,6 +313,7 @@ function pctClass(pct) {
                 <td class="border-t border-slate-700/50 px-3 py-2 text-right" :class="entry.amount < 0 ? 'text-green-400' : 'text-red-400'">
                   {{ entry.amount < 0 ? '-' : '+' }}{{ fmt(Math.abs(entry.amount)) }}
                 </td>
+                <td class="border-t border-l border-slate-700/50 px-3 py-2"></td>
                 <td class="border-t border-slate-700/50 px-3 py-2 text-center text-slate-600">—</td>
                 <td class="border-t border-slate-700/50 px-3 py-2 text-center text-slate-600">—</td>
                 <td
@@ -329,6 +339,7 @@ function pctClass(pct) {
                 <td class="border-t border-slate-700/50 px-3 py-2 text-right text-slate-400">{{ fmt(charge.amount) }}</td>
                 <td class="border-t border-slate-700/50 px-3 py-2 text-right text-slate-600">{{ fmt(0) }}</td>
                 <td class="border-t border-slate-700/50 px-3 py-2 text-right text-slate-300">{{ fmt(charge.amount) }}</td>
+                <td class="border-t border-l border-slate-700/50 px-3 py-2"></td>
                 <td class="border-t border-slate-700/50 px-3 py-2 text-center text-slate-600">0%</td>
                 <td class="border-t border-slate-700/50 px-3 py-2 text-center text-slate-500">1</td>
                 <td
@@ -356,7 +367,12 @@ function pctClass(pct) {
                 {{ fmt(data.cards.reduce((s,c) => s + c.plans.reduce((ps,p) => ps + (p.msi_monthly_amount ?? p.amount) * (p.msi_current_month ?? 0), 0), 0)) }}
               </td>
               <td class="px-3 py-3 text-right text-white font-bold">
-                {{ fmt(data.grandTotalRemaining + data.grandTotalCharges + data.grandManualBalance) }}
+                {{ fmt(data.grandTotalRemaining + data.grandTotalCharges) }}
+              </td>
+              <td class="px-3 py-3 text-right font-bold border-l border-slate-600"
+                :class="(data.cards.reduce((s,c) => s + (c.statement.total_balance ?? 0) + c.manualBalance, 0)) <= 0 ? 'text-green-400' : 'text-indigo-300'"
+              >
+                {{ fmt(data.cards.reduce((s,c) => s + (c.statement.total_balance ?? 0) + c.manualBalance, 0)) }}
               </td>
               <td class="px-3 py-3"></td>
               <td class="px-3 py-3 text-center text-orange-400 font-bold">{{ fmt(data.grandTotalMonthly) }}</td>

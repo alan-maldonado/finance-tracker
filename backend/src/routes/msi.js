@@ -81,6 +81,7 @@ router.get('/', (req, res) => {
         period_year: statement.period_year,
         period_month: statement.period_month,
         payment_due_date: statement.payment_due_date,
+        total_balance: statement.total_balance,
         due_year: dueYear,
         due_month: dueMonth,
       },
