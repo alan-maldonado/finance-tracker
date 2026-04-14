@@ -218,7 +218,7 @@ function pctClass(pct) {
                   {{ fmt(cardData.plans.reduce((s,p) => s + (p.msi_monthly_amount ?? p.amount) * (p.msi_current_month ?? 0), 0)) }}
                 </td>
                 <td class="border-t border-slate-700 px-3 py-2.5 text-right text-white font-semibold">
-                  {{ fmt(cardData.totalRemaining + cardData.totalCharges) }}
+                  {{ fmt(cardData.totalRemaining + cardData.totalCharges + cardData.manualBalance) }}
                 </td>
                 <td class="border-t border-slate-700 px-3 py-2.5"></td>
                 <td class="border-t border-slate-700 px-3 py-2.5 text-center text-orange-400 font-semibold">
@@ -356,7 +356,7 @@ function pctClass(pct) {
                 {{ fmt(data.cards.reduce((s,c) => s + c.plans.reduce((ps,p) => ps + (p.msi_monthly_amount ?? p.amount) * (p.msi_current_month ?? 0), 0), 0)) }}
               </td>
               <td class="px-3 py-3 text-right text-white font-bold">
-                {{ fmt(data.grandTotalRemaining + data.grandTotalCharges) }}
+                {{ fmt(data.grandTotalRemaining + data.grandTotalCharges + data.grandManualBalance) }}
               </td>
               <td class="px-3 py-3"></td>
               <td class="px-3 py-3 text-center text-orange-400 font-bold">{{ fmt(data.grandTotalMonthly) }}</td>
