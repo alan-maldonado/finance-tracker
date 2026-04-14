@@ -124,57 +124,87 @@ function interestType(desc) {
     : null;
 }
 
+// Lines that are page-break noise and should be skipped inside MSI parsing
+function isMsiNoise(line) {
+  return (
+    line === '.' ||
+    /^(página|notas:|número de tarjeta:|tarjeta titular:|fecha|descripción|monto|saldo|pago|núm|tasa|intereses|iva|de la|operación|original|pendiente|requerido|aplicable|del periodo)/i.test(line) ||
+    /^\d+$/.test(line)
+  );
+}
+
 function extractTransactions(text) {
   const transactions = [];
-  const lines = text.split('\n').map(l => l.trim());
 
   // -------------------------------------------------------------------------
-  // 1. Parse MSI section: "COMPRAS Y CARGOS DIFERIDOS A MESES"
+  // 1. Parse MSI sections: "DIFERIDOS A MESES (SIN|CON) INTERESES"
+  //    Format per entry:
+  //      DD-MMM-YYYY
+  //      DESCRIPTION
+  //      $MONTO_ORIGINAL
+  //      $SALDO_PENDIENTE
+  //      [$INTERESES] [$IVA]     ← only in CON INTERESES section
+  //      $PAGO_REQUERIDO         ← always the LAST amount before "X de Y"
+  //      X de Y
+  //      NA | X.XX%
   // -------------------------------------------------------------------------
+
+  // Capture everything from first "DIFERIDOS A MESES" to the regular section
   const msiSectionMatch = text.match(
-    /COMPRAS Y CARGOS DIFERIDOS A MESES(?:\s+CON|\s+SIN)\s+INTERESES([\s\S]*?)(?=CARGOS, ABONOS Y COMPRAS REGULARES|ATENCIÓN DE QUEJAS|$)/i
+    /DIFERIDOS\s+A\s+MESES[\s\S]*?(CARGOS,\s*ABONOS\s*Y\s*COMPRAS\s*REGULARES|ATENCIÓN\s+DE\s+QUEJAS|$)/i
   );
 
   if (msiSectionMatch) {
-    const msiLines = msiSectionMatch[1].split('\n').map(l => l.trim()).filter(Boolean);
+    const raw = msiSectionMatch[0];
+    // Flatten: split on newlines, trim, filter blanks and noise
+    const msiLines = raw.split('\n').map(l => l.trim()).filter(l => l && !isMsiNoise(l));
+
     let i = 0;
     while (i < msiLines.length) {
       const line = msiLines[i];
 
-      // Skip header/noise
       if (!DATE_RE.test(line)) { i++; continue; }
 
       const date = parseDate(line);
       if (!date) { i++; continue; }
 
-      // Next line: description + concatenated amounts (e.g. "DISPONIBLE BANAMEX$70,000.00$40,320.57")
-      const descLine = msiLines[i + 1] || '';
-      // Extract description (text before first $)
-      const descMatch = descLine.match(/^([^$]+)/);
-      const description = descMatch ? descMatch[1].trim() : descLine;
-
-      // Skip ahead to find "X de Y" line and monthly payment amount
-      let msiCurrent = null;
-      let msiTotal = null;
-      let monthlyAmount = null;
-
-      for (let j = i + 1; j < Math.min(i + 8, msiLines.length); j++) {
-        const jLine = msiLines[j];
-
-        // "11 de 24" or "011 de 024"
-        const installMatch = jLine.match(/^(\d+)\s+de\s+(\d+)$/i);
-        if (installMatch) {
-          msiCurrent = parseInt(installMatch[1]);
-          msiTotal = parseInt(installMatch[2]);
+      // Next non-date line is the description
+      let description = null;
+      let j = i + 1;
+      while (j < msiLines.length && !description) {
+        const l = msiLines[j];
+        if (DATE_RE.test(l)) break; // next entry started
+        if (!AMOUNT_RE.test(l) && !/^\d+\s+de\s+\d+$/i.test(l) && !/^NA$/i.test(l) && !/^\d+[\.,]\d+%$/.test(l)) {
+          description = l;
         }
-
-        // Monthly payment amount line (standalone "$X,XXX.XX" not concatenated)
-        if (AMOUNT_RE.test(jLine) && monthlyAmount === null) {
-          monthlyAmount = parseAmount(jLine);
-        }
+        j++;
       }
 
-      if (description && (monthlyAmount !== null || msiCurrent !== null)) {
+      // Collect amounts and "X de Y" until the next date or end
+      const amounts = [];
+      let msiCurrent = null;
+      let msiTotal = null;
+
+      while (j < msiLines.length) {
+        const l = msiLines[j];
+        if (DATE_RE.test(l)) break;
+
+        const installMatch = l.match(/^(\d+)\s+de\s+(\d+)$/i);
+        if (installMatch) {
+          msiCurrent = parseInt(installMatch[1]);
+          msiTotal   = parseInt(installMatch[2]);
+          j++;
+          break; // stop collecting amounts after "X de Y"
+        }
+
+        if (AMOUNT_RE.test(l)) amounts.push(parseAmount(l));
+        j++;
+      }
+
+      // Monthly payment = last amount collected (pago requerido)
+      const monthlyAmount = amounts.length ? amounts[amounts.length - 1] : null;
+
+      if (description && msiCurrent !== null) {
         transactions.push({
           date,
           description,
@@ -186,8 +216,7 @@ function extractTransactions(text) {
         });
       }
 
-      // Advance past this MSI entry (roughly 6 lines)
-      i += 6;
+      i = j; // continue from where inner loop stopped
     }
   }
 

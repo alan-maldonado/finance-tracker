@@ -2,7 +2,7 @@ node_modules
 
 # Uploaded PDFs and temp files
 backend/uploads/
-
+tests/
 # SQLite database
 backend/data/
 
