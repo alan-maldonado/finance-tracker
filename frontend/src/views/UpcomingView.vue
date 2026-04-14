@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { msiApi } from '../api/index.js'
 import { useProfileStore } from '../stores/profile.js'
@@ -16,10 +16,14 @@ const fmt = (n) =>
   n == null ? '—' : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN',
     minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n)
 
-onMounted(async () => {
+async function loadData() {
+  loading.value = true
   data.value = await msiApi.get(profileStore.activeProfileId)
   loading.value = false
-})
+}
+
+onMounted(loadData)
+watch(() => profileStore.activeProfileId, loadData)
 
 const toKey = (year, month) => year * 12 + month
 const keyToYM = (key) => ({ year: Math.floor((key - 1) / 12), month: ((key - 1) % 12) + 1 })

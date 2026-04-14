@@ -422,11 +422,12 @@ export function parseLiverpool(text) {
         continue;
       }
 
-      // First positive amount on the line = Compras y Cargos column
-      const amountM = fromDate.match(/([\d,]+\.\d{2})/);
-      if (!amountM) continue;
-      const amount = parseAmount(amountM[1]);
-      if (!amount || amount <= 0) continue;
+      // First positive non-zero amount on the line = Compras y Cargos column.
+      // Some PRESUPUESTO lines have "0.00" before the actual amount
+      // (e.g. "PRESUPUESTO0.00998.00") — skip zero amounts.
+      const allLineAmounts = [...fromDate.matchAll(/([\d,]+\.\d{2})/g)].map(m => parseAmount(m[1]));
+      const amount = allLineAmounts.find(a => a > 0);
+      if (!amount) continue;
 
       // Description: text between date+optional-segment-code and the first amount.
       // Strip trailing plan keyword since it is not the purchase name.

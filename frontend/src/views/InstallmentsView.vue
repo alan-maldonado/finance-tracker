@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { msiApi } from '../api/index.js'
 import { useProfileStore } from '../stores/profile.js'
@@ -15,10 +15,14 @@ const BANK_LABEL = { bbva: 'BBVA', banamex: 'Banamex', santander: 'Santander', o
 const fmt = (n) =>
   n == null ? '—' : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n)
 
-onMounted(async () => {
+async function loadData() {
+  loading.value = true
   data.value = await msiApi.get(profileStore.activeProfileId)
   loading.value = false
-})
+}
+
+onMounted(loadData)
+watch(() => profileStore.activeProfileId, loadData)
 </script>
 
 <template>
