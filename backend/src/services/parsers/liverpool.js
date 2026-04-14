@@ -226,24 +226,19 @@ export function parseLiverpool(text) {
       const conDate = parseDate(`${dayMonthM[1]}-${dayMonthM[2]}`, stYear, stMonth) ?? `${stYear}-01-01`;
       const isPresupuesto = msiTotalMonths === null;
       if (isPresupuesto) {
-        // PRESUPUESTO = regular revolving credit line → treat as a charge
-        transactions.push({
-          date: conDate,
-          description: description || 'PRESUPUESTO',
-          amount: cargoMes,
-          type: 'charge',
-        });
-      } else {
-        transactions.push({
-          date: conDate,
-          description: description || 'MSI CON INTERESES',
-          amount: cargoMes,
-          type: 'msi',
-          msiMonthlyAmount: cargoMes,
-          msiTotalMonths,
-          msiCurrentMonth,
-        });
+        // PRESUPUESTO in RESUMEN CON INTERESES is the revolving credit line balance summary.
+        // Individual charges are already captured from DETALLE DE MOVIMIENTOS — skip to avoid duplicates.
+        continue;
       }
+      transactions.push({
+        date: conDate,
+        description: description || 'MSI CON INTERESES',
+        amount: cargoMes,
+        type: 'msi',
+        msiMonthlyAmount: cargoMes,
+        msiTotalMonths,
+        msiCurrentMonth,
+      });
     }
   }
 
