@@ -42,6 +42,15 @@ const BANK_LABEL = {
 const fmt = (n) =>
   n == null ? '—' : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n)
 
+function statementLabel(s) {
+  // Use payment due date month to match dashboard grouping, fall back to period month
+  if (s.payment_due_date) {
+    const d = new Date(s.payment_due_date + 'T00:00:00')
+    return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`
+  }
+  return `${MONTHS[s.period_month - 1]} ${s.period_year}`
+}
+
 const totalCharges = computed(() =>
   transactions.value.filter(t => t.type === 'charge').reduce((s, t) => s + t.amount, 0)
 )
@@ -152,7 +161,7 @@ onMounted(async () => {
           >
             <option v-if="!statements.length" :value="null">No statements</option>
             <option v-for="s in statements" :key="s.id" :value="s.id">
-              {{ MONTHS[(s.period_month - 1)] }} {{ s.period_year }}
+              {{ statementLabel(s) }}
             </option>
           </select>
         </div>
