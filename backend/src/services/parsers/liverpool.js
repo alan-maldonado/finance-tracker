@@ -259,13 +259,8 @@ export function parseLiverpool(text) {
     const end   = Math.min(text.length, sm.index + sm[0].length + 200);
     const ctx   = text.slice(start, end);
 
-    // Find date: DD-MMM with optional leading zero
-    const dateM = ctx.match(/(\d{1,2}-[A-Z]{3})/i);
-    if (!dateM) continue;
-
-    // Find all amounts in the context (used only for a quick non-empty check)
-    const amounts = [...ctx.matchAll(/([\d,]+\.\d{2})/g)].map(m => parseAmount(m[1]));
-    if (amounts.length < 1) continue;
+    // Quick non-empty check: skip if no amounts at all in the context
+    if (!/([\d,]+\.\d{2})/.test(ctx)) continue;
 
     // Column order: Mensualidad | Saldo Anterior | Cargos del Periodo | Pago para no generar intereses | Saldo al Corte
     //
@@ -284,7 +279,10 @@ export function parseLiverpool(text) {
     //   afterAmounts: [726.80, 10.00(inflated), 726.80, 242.26, ...]
     //   → Pago para no generar intereses = afterAmounts[3]
     //   → current month: prefix digits of afterAmounts[1] string (after the saldo-al-corte)
-    const keyIdx = ctx.indexOf('MENS SIN INTERESES');
+    // Anchor afterKey to the EXACT match position in ctx, not the first occurrence
+    // of 'MENS SIN INTERESES' in ctx (which could be from a previous line when the
+    // 60-char lookback window overlaps the preceding RESUMEN entry).
+    const keyIdx = sm.index - start;
     const afterKey = ctx.slice(keyIdx);
 
     // Detect split-line layout: amount immediately after "INTERESES" then newline + date
@@ -338,6 +336,13 @@ export function parseLiverpool(text) {
         }
       }
     }
+
+    // Date: prefer the DD-MMM found in the ~20 chars immediately before the match
+    // (same line as the plan entry) to avoid picking up a date from the previous line
+    // when the 60-char lookback window overlaps it.
+    const nearPrefix = ctx.slice(Math.max(0, keyIdx - 20), keyIdx);
+    const dateM = nearPrefix.match(/(\d{1,2}-[A-Z]{3})/i) || ctx.match(/(\d{1,2}-[A-Z]{3})/i);
+    if (!dateM) continue;
 
     // Select Pago para no generar intereses and Saldo al Corte by layout.
     // Single layout: [..., cargos, mensualidad, saldo_al_corte]  → pagoIdx=2, saldo=last
