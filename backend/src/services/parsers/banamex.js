@@ -174,6 +174,79 @@ function extractTransactions(text) {
   }
 
   // -------------------------------------------------------------------------
+  // 1b. Parse CON INTERESES section (multi-line format, different from SIN INTERESES)
+  //
+  //    Each entry spans ~6 lines:
+  //      DD-MMM-YYYY                          ← date (alone)
+  //      Description$ORIGINAL$SALDO           ← desc + first two amounts
+  //      $INTEREST$IVA                        ← period interest amounts
+  //      $MONTHLY_PAYMENT                     ← pago requerido
+  //      N de M                               ← installment
+  //      X.XX%                                ← rate (ignored)
+  // -------------------------------------------------------------------------
+
+  const conInteresesMatch = text.match(
+    /COMPRAS Y CARGOS DIFERIDOS A MESES CON INTERESES([\s\S]*?)(?=CARGOS,\s*ABONOS\s*Y\s*COMPRAS\s*REGULARES|ATENCIÓN\s+DE\s+QUEJAS|$)/i
+  );
+
+  if (conInteresesMatch) {
+    const conLines = conInteresesMatch[1].split('\n').map(l => l.trim()).filter(Boolean);
+    let i = 0;
+    while (i < conLines.length) {
+      if (!DATE_RE.test(conLines[i])) { i++; continue; }
+
+      const date = parseDate(conLines[i]);
+      if (!date) { i++; continue; }
+
+      let description = null;
+      const allAmounts = [];
+      let msiCurrent = null, msiTotal = null;
+      let j = i + 1;
+
+      while (j < conLines.length && j < i + 12) {
+        const cl = conLines[j];
+
+        // "N de M" line ends the entry
+        const installM = cl.match(/^(\d+)\s+de\s+(\d+)$/i);
+        if (installM) {
+          msiCurrent = parseInt(installM[1]);
+          msiTotal   = parseInt(installM[2]);
+          j++;
+          break;
+        }
+
+        // Collect $ amounts
+        const amts = [...cl.matchAll(/\$([\d,]+\.\d{2})/g)].map(a => parseAmount(a[1]));
+        allAmounts.push(...amts);
+
+        // Description: text before the first $ on the first amount-containing line
+        if (!description && amts.length > 0) {
+          const descM = cl.match(/^([^$]+)\$/);
+          if (descM) description = descM[1].trim();
+        }
+
+        j++;
+      }
+
+      if (msiCurrent !== null && description && allAmounts.length > 0) {
+        // Last collected amount is "pago requerido" (monthly installment)
+        const monthlyAmount = allAmounts[allAmounts.length - 1];
+        transactions.push({
+          date,
+          description,
+          amount: monthlyAmount ?? 0,
+          type: 'msi',
+          msiCurrentMonth: msiCurrent,
+          msiTotalMonths: msiTotal,
+          msiMonthlyAmount: monthlyAmount,
+        });
+      }
+
+      i = j; // advance past this entry
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // 2. Parse regular section: "CARGOS, ABONOS Y COMPRAS REGULARES"
   // -------------------------------------------------------------------------
   const regularSectionMatch = text.match(
