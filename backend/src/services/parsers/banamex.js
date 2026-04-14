@@ -124,84 +124,39 @@ function interestType(desc) {
     : null;
 }
 
-// Lines that are page-break noise and should be skipped inside MSI parsing
-function isMsiNoise(line) {
-  return (
-    line === '.' ||
-    /^(página|notas:|número de tarjeta:|tarjeta titular:|fecha|descripción|monto|saldo|pago|núm|tasa|intereses|iva|de la|operación|original|pendiente|requerido|aplicable|del periodo)/i.test(line) ||
-    /^\d+$/.test(line)
-  );
-}
-
 function extractTransactions(text) {
   const transactions = [];
 
   // -------------------------------------------------------------------------
   // 1. Parse MSI sections: "DIFERIDOS A MESES (SIN|CON) INTERESES"
-  //    Format per entry:
-  //      DD-MMM-YYYY
-  //      DESCRIPTION
-  //      $MONTO_ORIGINAL
-  //      $SALDO_PENDIENTE
-  //      [$INTERESES] [$IVA]     ← only in CON INTERESES section
-  //      $PAGO_REQUERIDO         ← always the LAST amount before "X de Y"
-  //      X de Y
-  //      NA | X.XX%
+  //
+  //    After Y-coordinate grouping by pdf-parser, each entry is ONE line:
+  //      DD-MMM-YYYYDescription text here$ORIGINAL$SALDO[$INT][$IVA]$PAGO_REQN de M[NA|X%]
+  //
+  //    Strategy: match date at start, description up to first $,
+  //              collect all $amounts, then "N de M".
+  //              Last amount = pago requerido (monthly payment).
   // -------------------------------------------------------------------------
 
-  // Capture everything from first "DIFERIDOS A MESES" to the regular section
   const msiSectionMatch = text.match(
-    /DIFERIDOS\s+A\s+MESES[\s\S]*?(CARGOS,\s*ABONOS\s*Y\s*COMPRAS\s*REGULARES|ATENCIÓN\s+DE\s+QUEJAS|$)/i
+    /DIFERIDOS\s+A\s+MESES[\s\S]*?(?=CARGOS,\s*ABONOS\s*Y\s*COMPRAS\s*REGULARES|ATENCIÓN\s+DE\s+QUEJAS|$)/i
   );
 
   if (msiSectionMatch) {
-    const raw = msiSectionMatch[0];
-    // Flatten: split on newlines, trim, filter blanks and noise
-    const msiLines = raw.split('\n').map(l => l.trim()).filter(l => l && !isMsiNoise(l));
+    for (const line of msiSectionMatch[0].split('\n')) {
+      // Each valid entry starts with a date immediately followed by description (no space between)
+      const m = line.match(/^(\d{2}-[a-záéíóú]{3}-\d{4})([^$]+)((?:\$[\d,]+\.\d{2})+)\s*(\d+)\s+de\s+(\d+)/i);
+      if (!m) continue;
 
-    let i = 0;
-    while (i < msiLines.length) {
-      const line = msiLines[i];
+      const date = parseDate(m[1]);
+      if (!date) continue;
 
-      if (!DATE_RE.test(line)) { i++; continue; }
+      const description = m[2].trim();
+      const msiCurrent  = parseInt(m[4]);
+      const msiTotal    = parseInt(m[5]);
 
-      const date = parseDate(line);
-      if (!date) { i++; continue; }
-
-      // Next non-date line is the description
-      let description = null;
-      let j = i + 1;
-      while (j < msiLines.length && !description) {
-        const l = msiLines[j];
-        if (DATE_RE.test(l)) break; // next entry started
-        if (!AMOUNT_RE.test(l) && !/^\d+\s+de\s+\d+$/i.test(l) && !/^NA$/i.test(l) && !/^\d+[\.,]\d+%$/.test(l)) {
-          description = l;
-        }
-        j++;
-      }
-
-      // Collect amounts and "X de Y" until the next date or end
-      const amounts = [];
-      let msiCurrent = null;
-      let msiTotal = null;
-
-      while (j < msiLines.length) {
-        const l = msiLines[j];
-        if (DATE_RE.test(l)) break;
-
-        const installMatch = l.match(/^(\d+)\s+de\s+(\d+)$/i);
-        if (installMatch) {
-          msiCurrent = parseInt(installMatch[1]);
-          msiTotal   = parseInt(installMatch[2]);
-          j++;
-          break; // stop collecting amounts after "X de Y"
-        }
-
-        if (AMOUNT_RE.test(l)) amounts.push(parseAmount(l));
-        j++;
-      }
-
-      // Monthly payment = last amount collected (pago requerido)
+      // Extract all amounts; last one is "pago requerido"
+      const amounts = [...m[3].matchAll(/\$([\d,]+\.\d{2})/g)].map(a => parseAmount(a[1]));
       const monthlyAmount = amounts.length ? amounts[amounts.length - 1] : null;
 
       if (description && msiCurrent !== null) {
@@ -215,8 +170,6 @@ function extractTransactions(text) {
           msiMonthlyAmount: monthlyAmount,
         });
       }
-
-      i = j; // continue from where inner loop stopped
     }
   }
 
