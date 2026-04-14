@@ -1,8 +1,15 @@
+x-uid: &uid ${UID:-999}
+x-gid: &gid ${GID:-1000}
+
 services:
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        UID: *uid
+        GID: *gid
+    user: "${UID:-999}:${GID:-1000}"
     restart: unless-stopped
     volumes:
       - ./backend/data:/app/data
