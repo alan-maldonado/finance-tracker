@@ -109,7 +109,15 @@ export function parseLiverpool(text) {
   const minMsiM    = text.match(/PAGO\s+MINIMO\s*\+\s*MESES\s+SIN\s+INTERESES\s*\$*\s*([\d,]+\.?\d*)/i);
   const noIntM     = text.match(/PAGO PARA NO GENERAR INTERESES\s*([\d,]+\.?\d*)/i);
 
-  const cutoffDate = cutoffM  ? parseDateFull(cutoffM[1])  : null;
+  // Fallback: some PDFs encode header labels in body-text font (undecodable).
+  // The DETALLE header line is always in display-font and carries the cutoff date.
+  const detalleCutoffM = !cutoffM
+    ? text.match(/DETALLE\s+DE\s+MOVIMIENTOS\s+DEL\s+\d{1,2}-[A-Z]{3}-\d{4}\s+AL\s+(\d{1,2}-[A-Z]{3}-\d{4})/i)
+    : null;
+
+  const cutoffDate = cutoffM ? parseDateFull(cutoffM[1])
+    : detalleCutoffM          ? parseDateFull(detalleCutoffM[1])
+    : null;
   const dueDate    = dueM     ? parseDateFull(dueM[1])     : null;
 
   let period = null;
@@ -162,9 +170,10 @@ export function parseLiverpool(text) {
   if (conM) {
     for (const line of conM[1].split('\n')) {
       const l = line.trim();
-      if (!/^\d{1,2}-[A-Z]{3}/i.test(l)) continue;
-      const dateM = l.match(/^(\d{1,2}-[A-Z]{3})/i);
-      if (!dateM) continue;
+      // Some PDFs have garbled body-text chars between the day digits and the dash
+      // (e.g. "14Abreviación-AGO"). Allow up to 20 non-digit chars in between.
+      const dayMonthM = l.match(/(\d{1,2})[^\n\d]{0,20}-([A-Z]{3})/i);
+      if (!dayMonthM) continue;
 
       const amountMatches = [...l.matchAll(/([\d,]+\.\d{2})/g)];
       const amounts = amountMatches.map(m => parseAmount(m[1]));
@@ -201,22 +210,32 @@ export function parseLiverpool(text) {
 
       if (!cargoMes) continue;
 
-      // Description: alphabetic text between date+store-digits and first amount
-      const descM = l.match(/^\d{1,2}-[A-Z]{3}\d*\s*([A-Z][^]*?)[\d,]+\.\d{2}/i);
-      const description = descM ? descM[1].trim().replace(/\s+/g, ' ') : '';
+      // Description: alphabetic text between date+store-digits and first amount.
+      // Strip plan keywords and unmapped glyphs (body-text font chars like ¢, £, ¤).
+      const descM = l.match(/\d{1,2}-[A-Z]{3}\d*\s*([A-Z][^]*?)[\d,]+\.\d{2}/i);
+      const rawDesc = descM
+        ? descM[1]
+            .replace(/\s*(PRESUPUESTO|LIVERCASH|CREDITO|\d+\s*MENS).*$/i, '')
+            .replace(/[^\x20-\x7E]/g, '')
+            .trim()
+            .replace(/\s+/g, ' ')
+        : '';
+      // Require at least 4 non-space chars to be a meaningful description
+      const description = rawDesc.replace(/\s/g, '').length >= 4 ? rawDesc : '';
 
+      const conDate = parseDate(`${dayMonthM[1]}-${dayMonthM[2]}`, stYear, stMonth) ?? `${stYear}-01-01`;
       const isPresupuesto = msiTotalMonths === null;
       if (isPresupuesto) {
         // PRESUPUESTO = regular revolving credit line → treat as a charge
         transactions.push({
-          date: parseDate(dateM[1], stYear, stMonth) ?? `${stYear}-01-01`,
+          date: conDate,
           description: description || 'PRESUPUESTO',
           amount: cargoMes,
           type: 'charge',
         });
       } else {
         transactions.push({
-          date: parseDate(dateM[1], stYear, stMonth) ?? `${stYear}-01-01`,
+          date: conDate,
           description: description || 'MSI CON INTERESES',
           amount: cargoMes,
           type: 'msi',
@@ -233,7 +252,8 @@ export function parseLiverpool(text) {
   // lines when they share page-coordinate ranges.
   // RESUMEN rows have 4+ amounts (saldo_anterior, cargos, mensualidad, saldo_al_corte).
   // DETALLE rows have exactly 1 positive amount (original purchase) → skip those.
-  const sinRe = /(\d{1,2})\s+MENS\s+SIN\s+INTERESES/gi;
+  // Some PDFs use "MESES" instead of "MENS", and "INTERSES" instead of "INTERESES"
+  const sinRe = /(\d{1,2})\s+(?:MENS|MESES)\s+SIN\s+INTERE?SES/gi;
   let sm;
   while ((sm = sinRe.exec(text)) !== null) {
     const totalMonths = parseInt(sm[1]);
