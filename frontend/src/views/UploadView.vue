@@ -2,11 +2,13 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useCardsStore } from '../stores/cards.js'
+import { useProfileStore } from '../stores/profile.js'
 import { statementsApi } from '../api/index.js'
 
 const router = useRouter()
 const route = useRoute()
 const cardsStore = useCardsStore()
+const profileStore = useProfileStore()
 
 const selectedCardId = ref('')
 const dragOver = ref(false)
@@ -107,7 +109,7 @@ function reset() {
 }
 
 onMounted(async () => {
-  await cardsStore.fetchCards()
+  await cardsStore.fetchCards(profileStore.activeProfileId)
   if (route.query.card_id) selectedCardId.value = String(route.query.card_id)
 })
 </script>

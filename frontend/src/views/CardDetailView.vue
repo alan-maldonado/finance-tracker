@@ -5,7 +5,7 @@ import { useCardsStore } from '../stores/cards.js'
 import { useProfileStore } from '../stores/profile.js'
 import { statementsApi, transactionsApi, manualEntriesApi } from '../api/index.js'
 import TransactionList from '../components/TransactionList.vue'
-import MSITracker from '../components/MSITracker.vue'
+import InstallmentTracker from '../components/InstallmentTracker.vue'
 import ManualEntryModal from '../components/ManualEntryModal.vue'
 
 const props = defineProps({ id: { type: String, required: true } })
@@ -249,7 +249,7 @@ onMounted(async () => {
     <!-- Tabs -->
     <div class="flex gap-1 mb-4 bg-slate-800/50 rounded-lg p-1 w-fit">
       <button
-        v-for="tab in [{ key: 'transactions', label: 'Transactions' }, { key: 'msi', label: 'MSI Tracker' }, { key: 'manual', label: 'Manual entries' }]"
+        v-for="tab in [{ key: 'transactions', label: 'Transactions' }, { key: 'msi', label: 'Installments' }, { key: 'manual', label: 'Manual entries' }]"
         :key="tab.key"
         @click="activeTab = tab.key"
         class="px-4 py-1.5 rounded-md text-sm transition-colors"
@@ -268,7 +268,7 @@ onMounted(async () => {
       </div>
 
       <div v-if="activeTab === 'msi'">
-        <MSITracker :transactions="transactions" />
+        <InstallmentTracker :transactions="transactions" />
       </div>
 
       <div v-if="activeTab === 'manual'">

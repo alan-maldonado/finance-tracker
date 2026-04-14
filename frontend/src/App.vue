@@ -53,7 +53,7 @@ onMounted(async () => {
         </RouterLink>
         <template v-if="hasStatements">
           <RouterLink
-            to="/msi"
+            to="/installments"
             class="text-sm text-slate-400 hover:text-white transition-colors"
             active-class="!text-white font-medium"
           >
