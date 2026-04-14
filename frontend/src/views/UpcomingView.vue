@@ -99,6 +99,19 @@ function cardTotalForMonth(cardData, colKey) {
 const grandTotalForMonth = (colKey) =>
   (data.value?.cards ?? []).reduce((s, c) => s + cardTotalForMonth(c, colKey), 0)
 
+const collapsed = ref(new Set())
+function toggleCard(id) {
+  if (collapsed.value.has(id)) collapsed.value.delete(id)
+  else collapsed.value.add(id)
+  collapsed.value = new Set(collapsed.value)
+}
+function collapseAll() {
+  collapsed.value = new Set((data.value?.cards ?? []).map(c => c.card.id))
+}
+function expandAll() {
+  collapsed.value = new Set()
+}
+
 function pctClass(pct) {
   if (pct >= 75) return 'text-green-400'
   if (pct >= 40) return 'text-yellow-400'
@@ -108,9 +121,15 @@ function pctClass(pct) {
 
 <template>
   <div>
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-white">Upcoming Payments</h1>
-      <p class="text-slate-400 text-sm mt-1">Installment plans and charges from the latest statement of each card</p>
+    <div class="flex items-end justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-white">Upcoming Payments</h1>
+        <p class="text-slate-400 text-sm mt-1">Installment plans and charges from the latest statement of each card</p>
+      </div>
+      <div class="flex gap-2">
+        <button @click="collapseAll" class="text-xs text-slate-400 hover:text-white transition-colors px-2 py-1">Collapse all</button>
+        <button @click="expandAll" class="text-xs text-slate-400 hover:text-white transition-colors px-2 py-1">Expand all</button>
+      </div>
     </div>
 
     <div v-if="loading" class="text-slate-400 text-center py-12">Loading...</div>
@@ -182,13 +201,17 @@ function pctClass(pct) {
               <!-- Card subtotal row -->
               <tr
                 class="bg-slate-800/60 cursor-pointer hover:bg-slate-700/40 transition-colors"
-                @click="router.push(`/cards/${cardData.card.id}`)"
+                @click="toggleCard(cardData.card.id)"
               >
                 <td class="sticky left-0 z-10 bg-slate-800 border-t border-r border-slate-700 px-4 py-2.5">
                   <div class="flex items-center gap-2">
                     <div class="w-2.5 h-2.5 rounded-full shrink-0" :style="{ backgroundColor: cardData.card.color }"></div>
-                    <span class="text-white font-semibold">{{ cardData.card.alias }}</span>
+                    <span
+                      class="text-white font-semibold hover:text-indigo-300 transition-colors"
+                      @click.stop="router.push(`/cards/${cardData.card.id}`)"
+                    >{{ cardData.card.alias }}</span>
                     <span class="text-slate-500 text-xs">{{ BANK_LABEL[cardData.card.bank] || cardData.card.bank }}</span>
+                    <span class="text-slate-500 text-xs ml-auto">{{ collapsed.has(cardData.card.id) ? '▸' : '▾' }}</span>
                   </div>
                 </td>
                 <td class="border-t border-slate-700 px-3 py-2.5 text-right text-slate-300 font-medium">
@@ -217,7 +240,7 @@ function pctClass(pct) {
               </tr>
 
               <!-- MSI plan rows -->
-              <tr v-for="plan in cardData.plans" :key="plan.id" class="hover:bg-slate-800/30 transition-colors">
+              <tr v-for="plan in cardData.plans" :key="plan.id" v-show="!collapsed.has(cardData.card.id)" class="hover:bg-slate-800/30 transition-colors">
                 <td class="sticky left-0 z-10 bg-slate-950 border-t border-r border-slate-700/50 px-4 py-2 pl-9">
                   <div class="text-slate-300 truncate max-w-xs">{{ plan.description }}</div>
                   <div class="text-slate-600 text-xs">{{ plan.date }}</div>
@@ -252,7 +275,7 @@ function pctClass(pct) {
               </tr>
 
               <!-- Interest row (single row per card, shown in due month) -->
-              <tr v-if="cardData.totalInterest" class="hover:bg-slate-800/30 transition-colors">
+              <tr v-if="cardData.totalInterest" v-show="!collapsed.has(cardData.card.id)" class="hover:bg-slate-800/30 transition-colors">
                 <td class="sticky left-0 z-10 bg-slate-950 border-t border-r border-slate-700/50 px-4 py-2 pl-9">
                   <div class="text-yellow-400 truncate max-w-xs">Interest / IVA</div>
                   <div class="text-slate-600 text-xs">1 month</div>
@@ -274,7 +297,7 @@ function pctClass(pct) {
               </tr>
 
               <!-- Manual payment rows (shown in due month column, green) -->
-              <tr v-for="entry in cardData.manualEntries" :key="'m-' + entry.id" class="hover:bg-slate-800/30 transition-colors">
+              <tr v-for="entry in cardData.manualEntries" :key="'m-' + entry.id" v-show="!collapsed.has(cardData.card.id)" class="hover:bg-slate-800/30 transition-colors">
                 <td class="sticky left-0 z-10 bg-slate-950 border-t border-r border-slate-700/50 px-4 py-2 pl-9">
                   <div class="text-green-400 truncate max-w-xs">{{ entry.description || (entry.amount < 0 ? 'Manual payment' : 'Manual charge') }}</div>
                   <div class="text-slate-600 text-xs">manual entry</div>
@@ -301,7 +324,7 @@ function pctClass(pct) {
               </tr>
 
               <!-- Charge rows (one row per charge, shown in due month column) -->
-              <tr v-for="charge in cardData.charges" :key="charge.id" class="hover:bg-slate-800/30 transition-colors">
+              <tr v-for="charge in cardData.charges" :key="charge.id" v-show="!collapsed.has(cardData.card.id)" class="hover:bg-slate-800/30 transition-colors">
                 <td class="sticky left-0 z-10 bg-slate-950 border-t border-r border-slate-700/50 px-4 py-2 pl-9">
                   <div class="text-slate-400 truncate max-w-xs">{{ charge.description }}</div>
                   <div class="text-slate-600 text-xs">{{ charge.date }} · 1 month</div>
