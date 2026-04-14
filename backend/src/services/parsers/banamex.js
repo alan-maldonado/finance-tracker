@@ -229,14 +229,26 @@ function extractTransactions(text) {
 // Main export
 // ---------------------------------------------------------------------------
 
+function estimateDueDate(cutoffDate) {
+  // Banamex typically gives ~20 days from cutoff to due date.
+  // Used as fallback when the PDF shows no due date (e.g. $0 owed).
+  const d = new Date(cutoffDate + 'T00:00:00');
+  d.setDate(d.getDate() + 20);
+  return d.toISOString().slice(0, 10);
+}
+
 export function parseBanamex(text) {
   const period = extractPeriod(text);
   const dueDate = extractDueDate(text);
   const summary = extractSummary(text);
   const transactions = extractTransactions(text);
 
+  // When $0 is owed the PDF leaves the due-date field blank.
+  // Estimate it so the dashboard places the statement in the correct month.
+  const resolvedDueDate = dueDate ?? (period?.cutoffDate ? estimateDueDate(period.cutoffDate) : null);
+
   return {
-    period: period ? { ...period, dueDate } : null,
+    period: period ? { ...period, dueDate: resolvedDueDate } : null,
     summary,
     transactions,
   };

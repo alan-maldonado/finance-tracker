@@ -18,18 +18,15 @@ router.get('/', (req, res) => {
   const mm = String(month).padStart(2, '0');
 
   const result = cards.map(card => {
-    // Statement whose payment is due in the requested year/month.
-    // Also include statements with no due date (minimum_payment = 0) matched by period month.
+    // Statement whose payment is due in the requested year/month
     const statement = db.prepare(`
       SELECT * FROM statements
       WHERE card_id = ?
-        AND (
-          (strftime('%Y', payment_due_date) = ? AND strftime('%m', payment_due_date) = ?)
-          OR (payment_due_date IS NULL AND period_year = ? AND period_month = ?)
-        )
+        AND strftime('%Y', payment_due_date) = ?
+        AND strftime('%m', payment_due_date) = ?
       ORDER BY period_year DESC, period_month DESC
       LIMIT 1
-    `).get(card.id, String(year), mm, parseInt(year), parseInt(month));
+    `).get(card.id, String(year), mm);
 
     let transactions = [];
     if (statement) {
