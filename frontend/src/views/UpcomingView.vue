@@ -206,10 +206,7 @@ function pctClass(pct) {
                 <td class="sticky left-0 z-10 bg-slate-800 border-t border-r border-slate-700 px-4 py-2.5">
                   <div class="flex items-center gap-2">
                     <div class="w-2.5 h-2.5 rounded-full shrink-0" :style="{ backgroundColor: cardData.card.color }"></div>
-                    <span
-                      class="text-white font-semibold hover:text-indigo-300 transition-colors"
-                      @click.stop="router.push(`/cards/${cardData.card.id}`)"
-                    >{{ cardData.card.alias }}</span>
+                    <span class="text-white font-semibold">{{ cardData.card.alias }}</span>
                     <span class="text-slate-500 text-xs">{{ BANK_LABEL[cardData.card.bank] || cardData.card.bank }}</span>
                     <span class="text-slate-500 text-xs ml-auto">{{ collapsed.has(cardData.card.id) ? '▸' : '▾' }}</span>
                   </div>
