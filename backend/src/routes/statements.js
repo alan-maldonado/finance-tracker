@@ -3,6 +3,7 @@ import multer from 'multer';
 import { readFileSync, mkdirSync, renameSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { randomUUID } from 'crypto';
 import { getDb } from '../db/database.js';
 import { parsePDF } from '../services/pdf-parser.js';
 
@@ -98,32 +99,32 @@ router.post('/upload', upload.single('file'), async (req, res, next) => {
       db.prepare('DELETE FROM transactions WHERE statement_id=?').run(existing.id);
       statementId = existing.id;
     } else {
-      const result = db.prepare(`
+      statementId = randomUUID();
+      db.prepare(`
         INSERT INTO statements
-          (card_id, period_year, period_month, cutoff_date, payment_due_date,
+          (id, card_id, period_year, period_month, cutoff_date, payment_due_date,
            minimum_payment, total_balance, no_interest_payment, pdf_filename, raw_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
-        card_id, period.year, period.month,
+        statementId, card_id, period.year, period.month,
         period.cutoffDate, period.dueDate,
         summary?.minimumPayment, summary?.totalBalance,
         summary?.noInterestPayment ?? null,
         pdfRelPath, JSON.stringify(parsed)
       );
-      statementId = result.lastInsertRowid;
     }
 
     // Insert transactions
     const insertTx = db.prepare(`
       INSERT INTO transactions
-        (statement_id, date, description, amount, type,
+        (id, statement_id, date, description, amount, type,
          msi_total_months, msi_current_month, msi_monthly_amount)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     db.transaction(txs => {
       for (const tx of txs) {
         insertTx.run(
-          statementId, tx.date, tx.description, tx.amount, tx.type,
+          randomUUID(), statementId, tx.date, tx.description, tx.amount, tx.type,
           tx.msiTotalMonths ?? null, tx.msiCurrentMonth ?? null, tx.msiMonthlyAmount ?? null
         );
       }

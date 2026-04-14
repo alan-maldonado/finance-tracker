@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { randomUUID } from 'crypto';
 import { getDb } from '../db/database.js';
 
 const router = Router();
@@ -9,8 +10,8 @@ router.get('/', (req, res) => {
   let query = 'SELECT * FROM manual_entries WHERE 1=1';
   const params = [];
   if (card_id) { query += ' AND card_id=?'; params.push(card_id); }
-  if (year) { query += ' AND year=?'; params.push(year); }
-  if (month) { query += ' AND month=?'; params.push(month); }
+  if (year)    { query += ' AND year=?'; params.push(year); }
+  if (month)   { query += ' AND month=?'; params.push(month); }
   query += ' ORDER BY created_at ASC';
   res.json(db.prepare(query).all(...params));
 });
@@ -24,10 +25,11 @@ router.post('/', (req, res) => {
   const card = db.prepare('SELECT id FROM cards WHERE id=?').get(card_id);
   if (!card) return res.status(404).json({ error: 'Card not found' });
 
-  const result = db.prepare(
-    'INSERT INTO manual_entries (card_id, year, month, amount, description) VALUES (?, ?, ?, ?, ?)'
-  ).run(card_id, year, month, amount, description || null);
-  res.status(201).json(db.prepare('SELECT * FROM manual_entries WHERE id=?').get(result.lastInsertRowid));
+  const id = randomUUID();
+  db.prepare(
+    'INSERT INTO manual_entries (id, card_id, year, month, amount, description) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(id, card_id, year, month, amount, description || null);
+  res.status(201).json(db.prepare('SELECT * FROM manual_entries WHERE id=?').get(id));
 });
 
 router.delete('/:id', (req, res) => {

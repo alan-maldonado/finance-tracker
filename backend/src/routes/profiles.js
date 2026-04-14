@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { randomUUID } from 'crypto';
 import { getDb } from '../db/database.js';
 
 const router = Router();
@@ -12,8 +13,9 @@ router.post('/', (req, res) => {
   const { name, color } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
   const db = getDb();
-  const result = db.prepare('INSERT INTO profiles (name, color) VALUES (?, ?)').run(name.trim(), color || '#6366f1');
-  res.status(201).json(db.prepare('SELECT * FROM profiles WHERE id=?').get(result.lastInsertRowid));
+  const id = randomUUID();
+  db.prepare('INSERT INTO profiles (id, name, color) VALUES (?, ?, ?)').run(id, name.trim(), color || '#6366f1');
+  res.status(201).json(db.prepare('SELECT * FROM profiles WHERE id=?').get(id));
 });
 
 router.put('/:id', (req, res) => {
