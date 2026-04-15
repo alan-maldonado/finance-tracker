@@ -315,6 +315,28 @@ export async function parsePDF(buffer, { password } = {}) {
       } catch { /* fallback failure is non-fatal */ }
     }
 
+    // Backup period fix — runs regardless of whether the fallback was needed.
+    // The folio-line heuristic in parseLiverpool may not fire for every PDF variant.
+    // Once we have a dueDate (from text or from the fallback above), use it as a
+    // secondary signal: if the cutoff falls in the last 8 days of its month AND the
+    // due date is in the immediately following month AND the period is still pointing
+    // at the cutoff month (folio heuristic didn't advance it), advance to the due month.
+    //
+    // Safe for mid-month cutoffs (e.g. Karla, cutoff day 11): 11 >= (31-8)=23 → false.
+    // Works for late-month cutoffs (e.g. Alan, cutoff day 28): 28 >= 23 → true.
+    if (result.period?.cutoffDate && result.period?.dueDate) {
+      const [cy, cm, cd] = result.period.cutoffDate.split('-').map(Number);
+      const [dy, dm]     = result.period.dueDate.split('-').map(Number);
+      const lastDay      = new Date(cy, cm, 0).getDate(); // last day of cutoff month
+      const isLastWeek   = cd >= lastDay - 8;
+      const isNextMonth  = (dy === cy && dm === cm + 1) ||
+                           (dm === 1 && cm === 12 && dy === cy + 1);
+      const stillAtCutoff = result.period.year === cy && result.period.month === cm;
+      if (isLastWeek && isNextMonth && stillAtCutoff) {
+        result.period = { ...result.period, year: dy, month: dm };
+      }
+    }
+
     return { bank: 'liverpool', raw_text: decoded, ...result };
   }
 
