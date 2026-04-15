@@ -84,7 +84,7 @@ router.get('/card/:id', (req, res) => {
 
   const rows = db.prepare(`
     SELECT
-      s.period_year, s.period_month,
+      s.period_year, s.period_month, s.total_balance, s.no_interest_payment,
       COALESCE(SUM(CASE WHEN t.type='charge'    THEN t.amount ELSE 0 END), 0) AS charges,
       COALESCE(SUM(CASE WHEN t.type='msi'       THEN COALESCE(t.msi_monthly_amount, t.amount) ELSE 0 END), 0) AS msi_monthly,
       COALESCE(SUM(CASE WHEN t.type='payment'   THEN ABS(t.amount) ELSE 0 END), 0) AS payments,
@@ -96,13 +96,15 @@ router.get('/card/:id', (req, res) => {
     ORDER BY s.period_year ASC, s.period_month ASC
   `).all(card.id);
 
-  const months     = rows.map(r => `${MONTH_NAMES[r.period_month - 1]} ${r.period_year}`);
-  const charges    = rows.map(r => r.charges);
-  const msiMonthly = rows.map(r => r.msi_monthly);
-  const payments   = rows.map(r => r.payments);
-  const interest   = rows.map(r => r.interest);
+  const months           = rows.map(r => `${MONTH_NAMES[r.period_month - 1]} ${r.period_year}`);
+  const balances         = rows.map(r => r.total_balance ?? null);
+  const noInterestPayment = rows.map(r => r.no_interest_payment ?? null);
+  const charges          = rows.map(r => r.charges);
+  const msiMonthly       = rows.map(r => r.msi_monthly);
+  const payments         = rows.map(r => r.payments);
+  const interest         = rows.map(r => r.interest);
 
-  res.json({ months, charges, msiMonthly, payments, interest });
+  res.json({ months, balances, noInterestPayment, charges, msiMonthly, payments, interest });
 });
 
 export default router;

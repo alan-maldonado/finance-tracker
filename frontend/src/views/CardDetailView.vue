@@ -92,10 +92,67 @@ async function loadHistory() {
 const fmtCompact = (n) =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', notation: 'compact', maximumFractionDigits: 1 }).format(n)
 
+const balanceChartData = computed(() => {
+  const h = historyData.value
+  if (!h?.months?.length || h.balances.every(v => v === null)) return null
+  return {
+    labels: h.months,
+    datasets: [{
+      label: 'Balance',
+      data: h.balances,
+      borderColor: card.value?.color || '#6366f1',
+      backgroundColor: (card.value?.color || '#6366f1') + '22',
+      pointBackgroundColor: card.value?.color || '#6366f1',
+      pointBorderColor: card.value?.color || '#6366f1',
+      borderWidth: 2, pointRadius: 4, pointHoverRadius: 6,
+      tension: 0.35, fill: false, spanGaps: false,
+    }],
+  }
+})
+
+const balanceChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  interaction: { mode: 'index', intersect: false },
+  plugins: {
+    legend: {
+      labels: {
+        color: '#94a3b8', usePointStyle: true, pointStyleWidth: 10,
+        font: { size: 12 }, padding: 16,
+      },
+    },
+    tooltip: {
+      backgroundColor: '#1e293b',
+      borderColor: '#334155',
+      borderWidth: 1,
+      titleColor: '#e2e8f0',
+      bodyColor: '#94a3b8',
+      padding: 10,
+      callbacks: {
+        label: (ctx) => ctx.raw == null ? null
+          : ` ${ctx.dataset.label}: ${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(ctx.raw)}`,
+      },
+    },
+  },
+  scales: {
+    x: {
+      grid: { color: 'rgba(148,163,184,0.08)' },
+      ticks: { color: '#94a3b8', font: { size: 11 } },
+      border: { color: 'rgba(148,163,184,0.15)' },
+    },
+    y: {
+      grid: { color: 'rgba(148,163,184,0.08)' },
+      ticks: { color: '#94a3b8', font: { size: 11 }, callback: (v) => fmtCompact(v) },
+      border: { color: 'rgba(148,163,184,0.15)' },
+    },
+  },
+}
+
 const historyChartData = computed(() => {
   const h = historyData.value
   if (!h?.months?.length) return null
   const hasInterest = h.interest.some(v => v > 0)
+  const hasNoInterest = h.noInterestPayment?.some(v => v != null)
   return {
     labels: h.months,
     datasets: [
@@ -134,6 +191,15 @@ const historyChartData = computed(() => {
         pointBackgroundColor: 'rgba(250,204,21,0.9)',
         borderWidth: 2, pointRadius: 4, pointHoverRadius: 6,
         tension: 0.35, fill: false,
+      }] : []),
+      ...(hasNoInterest ? [{
+        label: 'No-interest payment',
+        data: h.noInterestPayment,
+        borderColor: 'rgba(129,140,248,0.9)',
+        backgroundColor: 'rgba(129,140,248,0.15)',
+        pointBackgroundColor: 'rgba(129,140,248,0.9)',
+        borderWidth: 2, pointRadius: 4, pointHoverRadius: 6,
+        tension: 0.35, fill: false, spanGaps: false,
       }] : []),
     ],
   }
@@ -386,12 +452,31 @@ onMounted(async () => {
       </div>
 
       <div v-if="activeTab === 'history'">
-        <div v-if="!historyChartData" class="text-slate-500 text-sm italic">No statements to show history yet.</div>
-        <div v-else>
-          <p class="text-slate-500 text-xs mb-4">Amounts per month across all statements</p>
-          <div class="h-80">
-            <Line :data="historyChartData" :options="historyChartOptions" />
+        <div v-if="!historyChartData && !balanceChartData" class="text-slate-500 text-sm italic">No statements to show history yet.</div>
+        <div v-else class="space-y-8">
+
+          <!-- Balance over time -->
+          <div v-if="balanceChartData">
+            <div class="mb-3">
+              <h3 class="text-slate-300 font-medium text-sm">Balance over time</h3>
+              <p class="text-slate-500 text-xs mt-0.5">Statement balance per month</p>
+            </div>
+            <div class="h-64">
+              <Line :data="balanceChartData" :options="balanceChartOptions" />
+            </div>
           </div>
+
+          <!-- Amounts breakdown -->
+          <div v-if="historyChartData">
+            <div class="mb-3 pt-2 border-t border-slate-700">
+              <h3 class="text-slate-300 font-medium text-sm mt-4">Amounts per month</h3>
+              <p class="text-slate-500 text-xs mt-0.5">Charges, MSI, payments and interest across all statements</p>
+            </div>
+            <div class="h-72">
+              <Line :data="historyChartData" :options="historyChartOptions" />
+            </div>
+          </div>
+
         </div>
       </div>
 
