@@ -223,6 +223,34 @@ async function extractTextLiverpool(buffer) {
   }
 }
 
+// Liverpool header fallback via PyMuPDF.
+// Our custom stream extractor misses header values (balance, payments, due date) when
+// they live in a Form XObject — PyMuPDF applies the invocation's coordinate transform
+// so the items sort to the correct page position. We only need page 1.
+// PyMuPDF outputs UTF-8; decodeLiverpool works on it because its key chars are Latin-1
+// ≡ Unicode U+00xx, which JS string comparison handles correctly.
+const LIVERPOOL_PYMUPDF_SCRIPT = `
+import sys, fitz
+doc = fitz.open(sys.argv[1])
+if doc.page_count > 0:
+    sys.stdout.buffer.write(doc[0].get_text("text", sort=True).encode("utf-8"))
+doc.close()
+`;
+
+async function extractLiverpoolPageOne(buffer) {
+  const tmpPath = join(tmpdir(), `liverpool_p1_${Date.now()}.pdf`);
+  try {
+    await writeFile(tmpPath, buffer);
+    const { stdout } = await execFileAsync('python3', ['-c', LIVERPOOL_PYMUPDF_SCRIPT, tmpPath], {
+      timeout: 15000,
+      maxBuffer: 2 * 1024 * 1024,
+      encoding: 'buffer',
+    });
+    return stdout.toString('utf8');
+  } catch { return ''; }
+  finally { await unlink(tmpPath).catch(() => {}); }
+}
+
 // Check PDF metadata for the Liverpool-specific generator string.
 async function getLiverpoolCreator(buffer) {
   try {
@@ -263,6 +291,30 @@ export async function parsePDF(buffer, { password } = {}) {
     const rawLatin1 = await extractTextLiverpool(buffer);
     const decoded = decodeLiverpool(rawLatin1);
     const result = parseLiverpool(decoded);
+
+    // When the custom stream extractor misses header values (they live in a Form XObject
+    // that our script places at wrong coordinates), fill in the gaps via PyMuPDF page 1.
+    const needsHeaderFallback =
+      !result.summary?.totalBalance ||
+      !result.summary?.minimumPayment ||
+      !result.period?.dueDate;
+    if (needsHeaderFallback) {
+      try {
+        const p1Raw  = await extractLiverpoolPageOne(buffer);
+        const p1Text = decodeLiverpool(p1Raw);
+        const p1     = parseLiverpool(p1Text);
+        if (!result.summary) result.summary = {};
+        if (!result.summary.totalBalance      && p1.summary?.totalBalance)
+          result.summary.totalBalance = p1.summary.totalBalance;
+        if (!result.summary.minimumPayment    && p1.summary?.minimumPayment)
+          result.summary.minimumPayment = p1.summary.minimumPayment;
+        if (!result.summary.noInterestPayment && p1.summary?.noInterestPayment)
+          result.summary.noInterestPayment = p1.summary.noInterestPayment;
+        if (result.period && !result.period.dueDate && p1.period?.dueDate)
+          result.period = { ...result.period, dueDate: p1.period.dueDate };
+      } catch { /* fallback failure is non-fatal */ }
+    }
+
     return { bank: 'liverpool', raw_text: decoded, ...result };
   }
 

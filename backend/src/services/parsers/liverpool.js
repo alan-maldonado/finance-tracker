@@ -126,6 +126,28 @@ export function parseLiverpool(text) {
     period = { year, month, cutoffDate, dueDate };
   }
 
+  // ── Issuance date period adjustment ────────────────────────────────────────
+  // Liverpool statements include a folio line with the format:
+  //   F[z] YYYYMMDD[folio_suffix] DD [garbled-month] YYYY^
+  // The YYYYMMDD encodes the cutoff date; the "DD ... YYYY" is the issuance date.
+  // When cutoff falls at month-end (e.g. Jan 28) the statement is issued in the
+  // following month (e.g. Feb 1). The cover page shows "1 de Febrero de 2026",
+  // so the user refers to it as the February statement.
+  // Detection: if issuance_day < cutoff_day, the statement crossed a month boundary.
+  if (period) {
+    const folioM = text.match(/F[^\s\d]{0,5}\s+(\d{4})(\d{2})(\d{2})\d+\s+(\d{1,2})\s+/);
+    if (folioM) {
+      const cutoffDay  = parseInt(folioM[3]);
+      const issuanceDay = parseInt(folioM[4]);
+      if (issuanceDay < cutoffDay) {
+        let m = period.month + 1;
+        let y = period.year;
+        if (m > 12) { m = 1; y++; }
+        period = { ...period, year: y, month: m };
+      }
+    }
+  }
+
   // When there are CON INTERESES plans, "PAGO MÍNIMO + MESES SIN INTERESES" is the
   // correct amount to avoid additional interest (covers both the installment plan
   // minimum and any SIN INTERESES monthly payments). Fall back to "PAGO PARA NO
@@ -176,7 +198,31 @@ export function parseLiverpool(text) {
       if (!dayMonthM) continue;
 
       const amountMatches = [...l.matchAll(/([\d,]+\.\d{2})/g)];
-      const amounts = amountMatches.map(m => parseAmount(m[1]));
+      // Garbling may split "13,621.00" → "13" + garbled-chars + ",621.00".
+      // When a match starts with "," (e.g. ",621.00"), the orphaned integer prefix
+      // is the digits that appear immediately after the previous amount match.
+      // e.g. "3,158.1013[garbled],621.00": between "3,158.10" and ",621.00" is
+      // "13[garbled]" → leading digits "13" are the orphaned prefix → "13,621.00".
+      const amounts = amountMatches.map((m, idx) => {
+        let raw = m[1];
+        if (raw.startsWith(',')) {
+          let orphanStr = '';
+          if (idx > 0) {
+            // Digits immediately after the previous amount (before garbled chars)
+            const prevEnd = amountMatches[idx - 1].index + amountMatches[idx - 1][0].length;
+            const between = l.slice(prevEnd, m.index);
+            const orphan = between.match(/^(\d{1,5})/);
+            if (orphan) orphanStr = orphan[1];
+          } else {
+            // First amount: look back a short window
+            const before = l.slice(0, m.index);
+            const orphan = before.match(/(\d{1,5})\D{0,20}$/);
+            if (orphan) orphanStr = orphan[1];
+          }
+          if (orphanStr) raw = orphanStr + raw;
+        }
+        return parseAmount(raw);
+      });
       if (amounts.length < 1) continue;
 
       // Detect fixed-term plan: look for "NN MENS" in the line
@@ -190,17 +236,19 @@ export function parseLiverpool(text) {
         // Fixed-term plan: Pago Mínimo = second-to-last amount
         cargoMes = amounts[amounts.length - 2];
 
-        // Current month (Mensualidad a Pagar): the digit(s) that prefix amounts[0].
-        // e.g. "8141,015.09" → prefix "8" = month 8; "15141,015.09" → prefix "15" = month 15.
-        const firstAmtStr = amountMatches[0]?.[1] ?? '';
-        const prefixM = firstAmtStr.match(/^(\d{1,2})/);
-        if (prefixM) {
-          const twoD = parseInt(prefixM[1]);
-          if (twoD >= 1 && twoD <= msiTotalMonths) {
-            msiCurrentMonth = twoD;
-          } else if (prefixM[1].length === 2) {
-            const oneD = Math.floor(twoD / 10);
-            if (oneD >= 1 && oneD <= msiTotalMonths) msiCurrentMonth = oneD;
+        // Current month (Mensualidad a Pagar): digits concatenated with saldo anterior.
+        // e.g. "LIVERCASH6162,162.21" → the "6" before "162," (a 3-digit thousands group)
+        // is the current month. This works even when garbling splits the saldo number,
+        // because the "6162," prefix is intact in the raw string.
+        // Strategy: look in the text after "NN MENS" for the first digit(s) immediately
+        // followed by a 3-digit thousands group (e.g. "6" before "162,").
+        const afterMensMatch = l.match(/\d{1,2}\s+MENS/i);
+        if (afterMensMatch) {
+          const afterMens = l.slice(afterMensMatch.index + afterMensMatch[0].length);
+          const monthM = afterMens.match(/(\d{1,2})(?=\d{3}[,.])/);
+          if (monthM) {
+            const m2 = parseInt(monthM[1]);
+            if (m2 >= 1 && m2 <= msiTotalMonths) msiCurrentMonth = m2;
           }
         }
       } else {
