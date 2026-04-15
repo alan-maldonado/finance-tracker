@@ -3,7 +3,7 @@ import { getDb } from '../db/database.js';
 
 const router = Router();
 
-const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 router.get('/', (req, res) => {
   const db = getDb();
@@ -74,6 +74,35 @@ router.get('/', (req, res) => {
   const totalMsiMonthly = allMonthKeys.map((_, i) => cardData.reduce((s, c) => s + (c.msiMonthly[i] ?? 0), 0));
 
   res.json({ months, cards: cardData, totals: { charges: totalCharges, msiMonthly: totalMsiMonthly } });
+});
+
+// GET /api/trends/card/:id — time series for a single card
+router.get('/card/:id', (req, res) => {
+  const db = getDb();
+  const card = db.prepare('SELECT * FROM cards WHERE id=?').get(req.params.id);
+  if (!card) return res.status(404).json({ error: 'Card not found' });
+
+  const rows = db.prepare(`
+    SELECT
+      s.period_year, s.period_month,
+      COALESCE(SUM(CASE WHEN t.type='charge'    THEN t.amount ELSE 0 END), 0) AS charges,
+      COALESCE(SUM(CASE WHEN t.type='msi'       THEN COALESCE(t.msi_monthly_amount, t.amount) ELSE 0 END), 0) AS msi_monthly,
+      COALESCE(SUM(CASE WHEN t.type='payment'   THEN ABS(t.amount) ELSE 0 END), 0) AS payments,
+      COALESCE(SUM(CASE WHEN t.type='interest'  THEN t.amount ELSE 0 END), 0) AS interest
+    FROM statements s
+    LEFT JOIN transactions t ON t.statement_id = s.id
+    WHERE s.card_id = ?
+    GROUP BY s.id
+    ORDER BY s.period_year ASC, s.period_month ASC
+  `).all(card.id);
+
+  const months     = rows.map(r => `${MONTH_NAMES[r.period_month - 1]} ${r.period_year}`);
+  const charges    = rows.map(r => r.charges);
+  const msiMonthly = rows.map(r => r.msi_monthly);
+  const payments   = rows.map(r => r.payments);
+  const interest   = rows.map(r => r.interest);
+
+  res.json({ months, charges, msiMonthly, payments, interest });
 });
 
 export default router;

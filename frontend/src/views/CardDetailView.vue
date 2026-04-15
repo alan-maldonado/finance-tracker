@@ -3,10 +3,18 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useCardsStore } from '../stores/cards.js'
 import { useProfileStore } from '../stores/profile.js'
-import { statementsApi, transactionsApi, manualEntriesApi } from '../api/index.js'
+import { statementsApi, transactionsApi, manualEntriesApi, trendsApi } from '../api/index.js'
 import TransactionList from '../components/TransactionList.vue'
 import InstallmentTracker from '../components/InstallmentTracker.vue'
 import ManualEntryModal from '../components/ManualEntryModal.vue'
+import { Line } from 'vue-chartjs'
+import {
+  Chart as ChartJS,
+  CategoryScale, LinearScale, PointElement, LineElement,
+  Tooltip, Legend,
+} from 'chart.js'
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
 
 const props = defineProps({ id: { type: String, required: true } })
 const router = useRouter()
@@ -73,6 +81,102 @@ const projectedBalance = computed(() => {
   return selectedStatement.value.total_balance + manualBalance.value
 })
 
+// ── History chart ──────────────────────────────────────────────────────────
+const historyData = ref(null)
+
+async function loadHistory() {
+  if (!card.value) return
+  historyData.value = await trendsApi.getCard(card.value.id)
+}
+
+const fmtCompact = (n) =>
+  new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', notation: 'compact', maximumFractionDigits: 1 }).format(n)
+
+const historyChartData = computed(() => {
+  const h = historyData.value
+  if (!h?.months?.length) return null
+  const hasInterest = h.interest.some(v => v > 0)
+  return {
+    labels: h.months,
+    datasets: [
+      {
+        label: 'Charges',
+        data: h.charges,
+        borderColor: 'rgba(239,68,68,0.9)',
+        backgroundColor: 'rgba(239,68,68,0.15)',
+        pointBackgroundColor: 'rgba(239,68,68,0.9)',
+        borderWidth: 2, pointRadius: 4, pointHoverRadius: 6,
+        tension: 0.35, fill: false,
+      },
+      {
+        label: 'Monthly MSI',
+        data: h.msiMonthly,
+        borderColor: 'rgba(251,146,60,0.9)',
+        backgroundColor: 'rgba(251,146,60,0.15)',
+        pointBackgroundColor: 'rgba(251,146,60,0.9)',
+        borderWidth: 2, pointRadius: 4, pointHoverRadius: 6,
+        tension: 0.35, fill: false,
+      },
+      {
+        label: 'Payments',
+        data: h.payments,
+        borderColor: 'rgba(74,222,128,0.9)',
+        backgroundColor: 'rgba(74,222,128,0.15)',
+        pointBackgroundColor: 'rgba(74,222,128,0.9)',
+        borderWidth: 2, pointRadius: 4, pointHoverRadius: 6,
+        tension: 0.35, fill: false,
+      },
+      ...(hasInterest ? [{
+        label: 'Interest',
+        data: h.interest,
+        borderColor: 'rgba(250,204,21,0.9)',
+        backgroundColor: 'rgba(250,204,21,0.15)',
+        pointBackgroundColor: 'rgba(250,204,21,0.9)',
+        borderWidth: 2, pointRadius: 4, pointHoverRadius: 6,
+        tension: 0.35, fill: false,
+      }] : []),
+    ],
+  }
+})
+
+const historyChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  interaction: { mode: 'index', intersect: false },
+  plugins: {
+    legend: {
+      labels: {
+        color: '#94a3b8', usePointStyle: true, pointStyleWidth: 10,
+        font: { size: 12 }, padding: 16,
+      },
+    },
+    tooltip: {
+      backgroundColor: '#1e293b',
+      borderColor: '#334155',
+      borderWidth: 1,
+      titleColor: '#e2e8f0',
+      bodyColor: '#94a3b8',
+      padding: 10,
+      callbacks: {
+        label: (ctx) => ctx.raw == null ? null
+          : ` ${ctx.dataset.label}: ${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(ctx.raw)}`,
+      },
+    },
+  },
+  scales: {
+    x: {
+      grid: { color: 'rgba(148,163,184,0.08)' },
+      ticks: { color: '#94a3b8', font: { size: 11 } },
+      border: { color: 'rgba(148,163,184,0.15)' },
+    },
+    y: {
+      grid: { color: 'rgba(148,163,184,0.08)' },
+      ticks: { color: '#94a3b8', font: { size: 11 }, callback: (v) => fmtCompact(v) },
+      border: { color: 'rgba(148,163,184,0.15)' },
+    },
+  },
+}
+
 async function loadStatements() {
   if (!card.value) return
   statements.value = await statementsApi.list({ card_id: card.value.id })
@@ -121,6 +225,7 @@ onMounted(async () => {
   await loadStatements()
   await loadTransactions()
   await loadManualEntries()
+  await loadHistory()
 })
 </script>
 
@@ -258,7 +363,7 @@ onMounted(async () => {
     <!-- Tabs -->
     <div class="flex gap-1 mb-4 bg-slate-800/50 rounded-lg p-1 w-fit">
       <button
-        v-for="tab in [{ key: 'transactions', label: 'Transactions' }, { key: 'msi', label: 'Installments' }, { key: 'manual', label: 'Manual entries' }]"
+        v-for="tab in [{ key: 'transactions', label: 'Transactions' }, { key: 'msi', label: 'Installments' }, { key: 'manual', label: 'Manual entries' }, { key: 'history', label: 'History' }]"
         :key="tab.key"
         @click="activeTab = tab.key"
         class="px-4 py-1.5 rounded-md text-sm transition-colors"
@@ -278,6 +383,16 @@ onMounted(async () => {
 
       <div v-if="activeTab === 'msi'">
         <InstallmentTracker :transactions="transactions" />
+      </div>
+
+      <div v-if="activeTab === 'history'">
+        <div v-if="!historyChartData" class="text-slate-500 text-sm italic">No statements to show history yet.</div>
+        <div v-else>
+          <p class="text-slate-500 text-xs mb-4">Amounts per month across all statements</p>
+          <div class="h-80">
+            <Line :data="historyChartData" :options="historyChartOptions" />
+          </div>
+        </div>
       </div>
 
       <div v-if="activeTab === 'manual'">

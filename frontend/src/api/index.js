@@ -41,6 +41,7 @@ export const msiApi = {
 
 export const trendsApi = {
   get: (profile_id, range) => api.get('/trends', { params: { profile_id, range } }).then(r => r.data),
+  getCard: (card_id) => api.get(`/trends/card/${card_id}`).then(r => r.data),
 }
 
 export const profilesApi = {

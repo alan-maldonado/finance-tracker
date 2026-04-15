@@ -128,7 +128,7 @@ const obligationsChartData = computed(() => {
     labels: data.value.months,
     datasets: [
       {
-        label: 'Cargos',
+        label: 'Charges',
         data: data.value.totals.charges,
         backgroundColor: 'rgba(239,68,68,0.7)',
         borderColor: 'rgba(239,68,68,0.9)',
@@ -136,7 +136,7 @@ const obligationsChartData = computed(() => {
         stack: 'obligations',
       },
       {
-        label: 'MSI mensual',
+        label: 'Monthly MSI',
         data: data.value.totals.msiMonthly,
         backgroundColor: 'rgba(251,146,60,0.7)',
         borderColor: 'rgba(251,146,60,0.9)',
@@ -183,9 +183,9 @@ const obligationsChartOptions = computed(() => ({
     </div>
 
     <!-- States -->
-    <div v-if="loading" class="text-slate-400 text-sm py-12 text-center">Cargando...</div>
+    <div v-if="loading" class="text-slate-400 text-sm py-12 text-center">Loading...</div>
     <div v-else-if="!data?.months?.length" class="text-slate-500 text-sm italic py-12 text-center">
-      No hay datos de estados de cuenta aún.
+      No statement data yet.
     </div>
 
     <!-- Charts -->
@@ -194,8 +194,8 @@ const obligationsChartOptions = computed(() => ({
       <!-- Balance por tarjeta -->
       <div class="bg-slate-800 rounded-xl border border-slate-700 p-5">
         <div class="mb-4">
-          <h2 class="text-white font-semibold">Balance por tarjeta</h2>
-          <p class="text-slate-500 text-xs mt-0.5">Saldo al corte mes a mes</p>
+          <h2 class="text-white font-semibold">Balance per card</h2>
+          <p class="text-slate-500 text-xs mt-0.5">Statement balance month by month</p>
         </div>
         <div class="h-72">
           <Line :data="balanceChartData" :options="balanceChartOptions" />
@@ -205,8 +205,8 @@ const obligationsChartOptions = computed(() => ({
       <!-- Obligaciones mensuales -->
       <div class="bg-slate-800 rounded-xl border border-slate-700 p-5">
         <div class="mb-4">
-          <h2 class="text-white font-semibold">Obligaciones mensuales</h2>
-          <p class="text-slate-500 text-xs mt-0.5">Cargos + MSI mensual acumulado por mes</p>
+          <h2 class="text-white font-semibold">Monthly obligations</h2>
+          <p class="text-slate-500 text-xs mt-0.5">Charges + monthly MSI installments per month</p>
         </div>
         <div class="h-72">
           <Bar :data="obligationsChartData" :options="obligationsChartOptions" />
