@@ -39,6 +39,10 @@ export const msiApi = {
   get: (profile_id) => api.get('/msi', { params: { profile_id } }).then(r => r.data),
 }
 
+export const trendsApi = {
+  get: (profile_id, range) => api.get('/trends', { params: { profile_id, range } }).then(r => r.data),
+}
+
 export const profilesApi = {
   list: () => api.get('/profiles').then(r => r.data),
   create: (name, color) => api.post('/profiles', { name, color }).then(r => r.data),

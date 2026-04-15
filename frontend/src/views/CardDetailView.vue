@@ -193,6 +193,15 @@ onMounted(async () => {
                   : '—' }}
             </div>
           </div>
+          <div v-if="card.credit_limit != null && selectedStatement.total_balance != null" class="text-right">
+            <div class="text-slate-500 text-xs">Available</div>
+            <div
+              class="font-semibold"
+              :class="(card.credit_limit - selectedStatement.total_balance) < 0 ? 'text-red-400' : 'text-green-400'"
+            >
+              {{ fmt(card.credit_limit - selectedStatement.total_balance) }}
+            </div>
+          </div>
           <a
             v-if="selectedStatement.pdf_filename"
             :href="`/uploads/${selectedStatement.pdf_filename}`"

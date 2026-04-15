@@ -66,6 +66,13 @@ onMounted(async () => {
           >
             Upcoming Payments
           </RouterLink>
+          <RouterLink
+            to="/trends"
+            class="text-sm text-slate-400 hover:text-white transition-colors"
+            active-class="!text-white font-medium"
+          >
+            Trends
+          </RouterLink>
         </template>
       </div>
       <div class="ml-auto flex items-center gap-3">
