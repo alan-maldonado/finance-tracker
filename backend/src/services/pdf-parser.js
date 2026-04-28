@@ -7,6 +7,7 @@ import { join } from 'path';
 import { parseBBVA } from './parsers/bbva.js';
 import { parseBanamex } from './parsers/banamex.js';
 import { parseSantander } from './parsers/santander.js';
+import { parseAmex } from './parsers/amex.js';
 import { decodeLiverpool, parseLiverpool } from './parsers/liverpool.js';
 
 // pdf-parse doesn't forward passwords to pdfjs, so we use the bundled pdfjs directly.
@@ -267,12 +268,14 @@ const BANK_DETECTORS = [
   { bank: 'bbva',      keywords: ['BBVA', 'Bancomer'] },
   { bank: 'banamex',   keywords: ['Citibanamex', 'Banamex', 'Citi '] },
   { bank: 'santander', keywords: ['Santander'] },
+  { bank: 'amex',      keywords: ['American Express', 'americanexpress'] },
 ];
 
 const PARSERS = {
   bbva:      parseBBVA,
   banamex:   parseBanamex,
   santander: parseSantander,
+  amex:      parseAmex,
 };
 
 function detectBank(text) {

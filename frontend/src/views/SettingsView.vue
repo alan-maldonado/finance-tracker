@@ -58,7 +58,7 @@ async function deleteProfile(profile) {
   }
 }
 
-const BANK_LABEL = { bbva: 'BBVA', banamex: 'Banamex', santander: 'Santander', other: 'Other' }
+const BANK_LABEL = { bbva: 'BBVA', banamex: 'Banamex', santander: 'Santander', liverpool: 'Liverpool', amex: 'Amex', other: 'Other' }
 const fmt = (n) => n == null ? '—' : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(n)
 
 onMounted(() => store.fetchCards(profileStore.activeProfileId))

@@ -15,6 +15,7 @@ const bankLabel = {
   banamex: 'Banamex',
   santander: 'Santander',
   liverpool: 'Liverpool',
+  amex: 'Amex',
   other: 'Other',
 }
 

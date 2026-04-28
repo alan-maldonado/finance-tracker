@@ -22,6 +22,7 @@ const BANKS = [
   { value: 'banamex', label: 'Banamex' },
   { value: 'santander', label: 'Santander' },
   { value: 'liverpool', label: 'Liverpool' },
+  { value: 'amex', label: 'Amex' },
   { value: 'other', label: 'Other' },
 ]
 
