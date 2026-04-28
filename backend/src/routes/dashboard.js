@@ -71,6 +71,15 @@ router.get('/', (req, res) => {
     const totalPayments   = Math.abs(payments.reduce((s, t) => s + t.amount, 0));
     const manualBalance   = manualEntries.reduce((s, e) => s + e.amount, 0);
 
+    // Capital de MSI aún por facturar (cuotas futuras). Amex lo descuenta del
+    // límite disponible aunque no esté en total_balance, así que lo exponemos
+    // para que el frontend pueda computar el "Available" correcto.
+    const pendingMsiCapital = msiTxs.reduce((s, t) => {
+      const monthly = t.msi_monthly_amount || 0;
+      const remaining = Math.max(0, (t.msi_total_months || 0) - (t.msi_current_month || 0));
+      return s + monthly * remaining;
+    }, 0);
+
     const statementBalance = statement?.total_balance ?? null;
     const projectedBalance = statementBalance !== null
       ? statementBalance + manualBalance
@@ -107,6 +116,7 @@ router.get('/', (req, res) => {
         manualBalance,
         projectedBalance,
         noInterestRemaining,
+        pendingMsiCapital,
         hasNextStatement: !!nextStatement,
         paidInNextStatement: nextStatement ? paidInNextStatement : null,
         transactionCount: transactions.length,

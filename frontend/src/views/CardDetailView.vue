@@ -67,6 +67,23 @@ const totalCharges = computed(() =>
 const totalMsi = computed(() =>
   transactions.value.filter(t => t.type === 'msi').reduce((s, t) => s + (t.msi_monthly_amount || t.amount), 0)
 )
+// Amex excludes future MSI capital from total_balance but deducts it from
+// available credit. Sum unbilled installments so we can mirror that.
+const pendingMsiCapital = computed(() =>
+  transactions.value
+    .filter(t => t.type === 'msi')
+    .reduce((s, t) => {
+      const monthly = t.msi_monthly_amount || 0
+      const remaining = Math.max(0, (t.msi_total_months || 0) - (t.msi_current_month || 0))
+      return s + monthly * remaining
+    }, 0)
+)
+const available = computed(() => {
+  if (!card.value || card.value.credit_limit == null || selectedStatement.value?.total_balance == null) return null
+  let v = card.value.credit_limit - selectedStatement.value.total_balance
+  if (card.value.bank === 'amex') v -= pendingMsiCapital.value
+  return v
+})
 const totalPayments = computed(() =>
   Math.abs(transactions.value.filter(t => t.type === 'payment').reduce((s, t) => s + t.amount, 0))
 )
@@ -364,13 +381,13 @@ onMounted(async () => {
                   : '—' }}
             </div>
           </div>
-          <div v-if="card.credit_limit != null && selectedStatement.total_balance != null" class="text-right">
+          <div v-if="available != null" class="text-right">
             <div class="text-slate-500 text-xs">Available</div>
             <div
               class="font-semibold"
-              :class="(card.credit_limit - selectedStatement.total_balance) < 0 ? 'text-red-400' : 'text-green-400'"
+              :class="available < 0 ? 'text-red-400' : 'text-green-400'"
             >
-              {{ fmt(card.credit_limit - selectedStatement.total_balance) }}
+              {{ fmt(available) }}
             </div>
           </div>
           <a

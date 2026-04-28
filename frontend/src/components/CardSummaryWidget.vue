@@ -29,6 +29,15 @@ const barWidth = computed(() => {
     msi: Math.round((summary.totalMsiMonthly / total) * 100),
   }
 })
+
+// Amex's "Pago para no generar intereses" excludes future MSI capital, so naive
+// (credit_limit - total_balance) overstates available credit. Subtract pending MSI.
+const available = computed(() => {
+  if (card.credit_limit == null || statement.total_balance == null) return null
+  let v = card.credit_limit - statement.total_balance
+  if (card.bank === 'amex') v -= (summary.pendingMsiCapital || 0)
+  return v
+})
 </script>
 
 <template>
@@ -108,11 +117,11 @@ const barWidth = computed(() => {
         <div class="text-right">
           <span class="text-slate-500">Available</span>
           <div
-            v-if="card.credit_limit != null && statement.total_balance != null"
+            v-if="available != null"
             class="font-medium"
-            :class="(card.credit_limit - statement.total_balance) < 0 ? 'text-red-400' : 'text-green-400'"
+            :class="available < 0 ? 'text-red-400' : 'text-green-400'"
           >
-            {{ fmt(card.credit_limit - statement.total_balance) }}
+            {{ fmt(available) }}
           </div>
           <div v-else class="text-slate-500 font-medium">—</div>
         </div>
