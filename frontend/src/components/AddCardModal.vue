@@ -8,7 +8,7 @@ const store = useCardsStore()
 const profileStore = useProfileStore()
 
 const form = ref({
-  bank: 'bbva',
+  bank: 'banamex',
   alias: '',
   last4: '',
   credit_limit: '',
@@ -18,7 +18,6 @@ const saving = ref(false)
 const error = ref(null)
 
 const BANKS = [
-  { value: 'bbva', label: 'BBVA' },
   { value: 'banamex', label: 'Banamex' },
   { value: 'santander', label: 'Santander' },
   { value: 'liverpool', label: 'Liverpool' },

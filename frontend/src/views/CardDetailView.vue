@@ -42,7 +42,6 @@ const selectedMonth = computed(() => selectedStatement.value?.period_month)
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 const BANK_LABEL = {
-  bbva: 'BBVA',
   banamex: 'Banamex',
   santander: 'Santander',
   liverpool: 'Liverpool',

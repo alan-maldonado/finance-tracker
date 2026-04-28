@@ -17,7 +17,6 @@ const saving = ref(false)
 const error = ref(null)
 
 const BANKS = [
-  { value: 'bbva',      label: 'BBVA' },
   { value: 'banamex',   label: 'Banamex' },
   { value: 'santander', label: 'Santander' },
   { value: 'liverpool', label: 'Liverpool' },

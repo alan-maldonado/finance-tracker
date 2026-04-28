@@ -11,7 +11,6 @@ const router = useRouter()
 const { card, statement, summary } = props.cardData
 
 const bankLabel = {
-  bbva: 'BBVA',
   banamex: 'Banamex',
   santander: 'Santander',
   liverpool: 'Liverpool',

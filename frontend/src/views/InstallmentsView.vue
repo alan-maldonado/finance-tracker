@@ -10,7 +10,7 @@ const loading = ref(true)
 const profileStore = useProfileStore()
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-const BANK_LABEL = { bbva: 'BBVA', banamex: 'Banamex', santander: 'Santander', liverpool: 'Liverpool', amex: 'Amex', other: 'Other' }
+const BANK_LABEL = { banamex: 'Banamex', santander: 'Santander', liverpool: 'Liverpool', amex: 'Amex', other: 'Other' }
 
 const fmt = (n) =>
   n == null ? '—' : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n)
